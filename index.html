@@ -3589,7 +3589,7 @@ buildMotionSnapshot(){
     pl:this.snapFighter(al,0,!0),
     al:this.snapFighter(hs,0,!0),
     shk:this.shake>0?this._q(this.shake):0,
-    en:ens.map(t=>[t.nid,this._q(t.x),this._q(t.y)])
+    en:ens.map(t=>[t.nid,this._q(t.x),this._q(t.y),this._q2(t.rot||0)])
   };
 }
 buildSnapshot(){
@@ -3644,7 +3644,7 @@ guestSnapshot(e){
   let isMotion=!!e.m;
   let prevTime=this._lastSnapTime||0;
   if(isMotion&&typeof e.time==="number"&&prevTime>0&&e.time<prevTime)return;
-  let dt=prevTime>0&&e.time>prevTime?R(e.time-prevTime,.02,.4):.08;
+  let dt=prevTime>0&&e.time>prevTime?R(e.time-prevTime,.04,.25):.1;
   if(typeof e.time==="number"&&e.time>prevTime)this._lastSnapTime=e.time;
   let applyPos=(a,l,o)=>{
     if(a===1)return; // Guest owns local player position 100% — never overwrite!
@@ -3664,7 +3664,20 @@ guestSnapshot(e){
     if(typeof e.time==="number")this.gameTime=Math.max(this.gameTime,e.time);
     if(e.en){
       for(let a of e.en){
-        if(a&&a.length>=3)applyPos(a[0],a[1],a[2]);
+        if(a&&a.length>=3){
+          let ent=this.mirrorEnts.get(a[0]);
+          if(!ent){
+            ent={x:a[1],y:a[2],tx:a[1],ty:a[2],vx:0,vy:0,trot:a[3]??0,rot:a[3]??0};
+            this.mirrorEnts.set(a[0],ent);
+          }else{
+            // Update target position via velocity calculation
+            ent.vx=R((a[1]-ent.tx)/dt,-480,480);
+            ent.vy=R((a[2]-ent.ty)/dt,-480,480);
+            ent.tx=a[1];
+            ent.ty=a[2];
+            if(typeof a[3]==="number")ent.trot=a[3];
+          }
+        }
       }
     }
     if(e.pl){
@@ -3838,13 +3851,17 @@ updateMirror(e){
       this._snapDirty=!1;
       this.rebuildMirror(t);
     }
-    let blendK=1-Math.exp(-14*e);
+    let blendK=1-Math.exp(-18*e);
     for(let[entId,ent]of this.mirrorEnts){
       if(entId===1)continue;
-      ent.tx+=ent.vx*e*.45;
-      ent.ty+=ent.vy*e*.45;
+      // === ONLINE OPTIMIZATION v2.1.6.5 ===
+      // Pure interpolation toward last known target position — NO extrapolation.
+      // The old code did `ent.tx += ent.vx*e*.45` (dead reckoning) which over-predicted
+      // entity positions. Whenever the host's enemy reversed direction, the predicted
+      // target kept moving forward (wrong), then snapped back to the true target —
+      // producing the "balik arah / rubber-band" effect on the guest side.
       let dx=ent.tx-ent.x,dy=ent.ty-ent.y,dist=Math.hypot(dx,dy);
-      if(dist>260){
+      if(dist>280){
         ent.x=ent.tx;ent.y=ent.ty;
       }else{
         ent.x+=dx*blendK;
@@ -3912,7 +3929,18 @@ applyMirrorPositions(e=0.016){
   for(let en of this.enemies){
     let m=t(en.nid,en);
     en.x=m.x;en.y=m.y;
-    en.rot=(en.rot||0)+(en.rotSpeed||1.2)*e;
+    // === ONLINE OPTIMIZATION v2.1.6.5 ===
+    // If host sent a target rotation (trot), smoothly lerp toward it instead of
+    // spinning locally with hardcoded rotSpeed=1.2 — keeps enemies visually synced.
+    if(typeof m.trot==="number"){
+      let drot=m.trot-en.rot;
+      while(drot>Math.PI)drot-=T;
+      while(drot<-Math.PI)drot+=T;
+      en.rot+=drot*Math.min(1,18*e);
+      m.rot=en.rot;
+    }else{
+      en.rot=(en.rot||0)+(en.rotSpeed||1.2)*e;
+    }
   }
   for(let b of this.bullets){
     b.x+=(b.vx||0)*e;
@@ -5672,6 +5700,10 @@ class RedboundNetworkManager {
       if (this.connecting) return;
       this.connecting = true;
 
+      // === ONLINE OPTIMIZATION v2.1.6.5 ===
+      // Single-broker with sequential fallback. Previously connected to all 3 brokers
+      // in parallel which tripled bandwidth, caused packet duplication, and overloaded
+      // public broker rate-limits — the #1 cause of severe online lag.
       let brokers = [
         "wss://broker.emqx.io:8084/mqtt",
         "wss://broker.hivemq.com:8884/mqtt",
@@ -5689,115 +5721,135 @@ class RedboundNetworkManager {
         }
       };
 
-      let pendingCount = brokers.length;
-      let markDone = () => {
-        pendingCount--;
-        if (pendingCount <= 0) {
-          this.connecting = false;
-          flushWaiters();
-        }
-      };
+      // Try brokers ONE AT A TIME. Stop at the first that succeeds.
+      let brokerIdx = 0;
+      let attachSocket = (url, idx) => {
+        let s = new WebSocket(url, ["mqtt"]);
+        s.binaryType = "arraybuffer";
+        s._mqttReady = false;
+        s._subs = new Set();
+        s._brokerUrl = url;
+        this.sockets.push(s);
 
-      // Connect to available brokers in parallel so both devices ALWAYS share a common broker
-      brokers.forEach((url, idx) => {
-        try {
-          let s = new WebSocket(url, ["mqtt"]);
-          s.binaryType = "arraybuffer";
-          s._mqttReady = false;
-          s._subs = new Set();
-          this.sockets.push(s);
+        let settled = false;
+        let to = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          try { s.close(); } catch {}
+          // timed out — try next broker
+          brokerIdx++;
+          if (brokerIdx < brokers.length) {
+            attachSocket(brokers[brokerIdx], brokerIdx);
+          } else {
+            this.connecting = false;
+            flushWaiters();
+          }
+        }, 3500);
 
-          let settled = false;
-          let to = setTimeout(() => {
-            if (settled) return;
-            settled = true;
-            try { s.close(); } catch {}
-            markDone();
-          }, 4000);
-
-          s.onopen = () => {
-            try {
-              s.send(mqttMakeConnect(this.clientId + "_" + idx));
-            } catch {
-              if (!settled) { settled = true; clearTimeout(to); markDone(); }
-            }
-          };
-
-          s.onmessage = (ev) => {
-            let buf = new Uint8Array(ev.data);
-            if (!buf || buf.length < 2) return;
-            let offset = 0;
-            while (offset < buf.length) {
-              let pktType = buf[offset] & 0xf0;
-              let mult = 1, remLen = 0, i = offset + 1;
-              while (i < buf.length) {
-                let d = buf[i++];
-                remLen += (d & 127) * mult;
-                mult *= 128;
-                if ((d & 128) === 0) break;
-              }
-              let pktEnd = i + remLen;
-              if (pktType === 0x20) { // CONNACK
-                s._mqttReady = true;
-                if (!settled) {
-                  settled = true;
-                  clearTimeout(to);
-                }
-                this.startKeepAlive();
-                for (let t of this.activeTopics) {
-                  this.sendSubToSocket(s, t);
-                }
+        s.onopen = () => {
+          try {
+            s.send(mqttMakeConnect(this.clientId + "_" + idx));
+          } catch {
+            if (!settled) {
+              settled = true;
+              clearTimeout(to);
+              brokerIdx++;
+              if (brokerIdx < brokers.length) {
+                attachSocket(brokers[brokerIdx], brokerIdx);
+              } else {
+                this.connecting = false;
                 flushWaiters();
-              } else if (pktType === 0x30 && pktEnd <= buf.length) { // PUBLISH
-                let topLen = (buf[i] << 8) | buf[i + 1];
-                let topStart = i + 2;
-                let payStart = topStart + topLen;
-                if (payStart <= pktEnd) {
-                  let topic = new TextDecoder().decode(buf.slice(topStart, payStart));
-                  let payloadStr = new TextDecoder().decode(buf.slice(payStart, pktEnd));
-                  try {
-                    let msg = JSON.parse(payloadStr);
-                    if (msg && msg.type === "game_event" && (msg.evt === "msnap" || msg.evt === "snap")) {
-                      if (!this._burstQueue) this._burstQueue = {};
-                      this._burstQueue[msg.evt] = { msg, topic };
-                    } else {
-                      this.handleInbound(msg, topic);
-                    }
-                  } catch {}
-                }
               }
-              offset = pktEnd;
-              if (remLen < 0 || offset <= 0) break;
             }
-            if (this._burstQueue) {
-              let q = this._burstQueue;
-              this._burstQueue = null;
-              if (q.snap) this.handleInbound(q.snap.msg, q.snap.topic);
-              if (q.msnap) this.handleInbound(q.msnap.msg, q.msnap.topic);
-            }
-          };
+          }
+        };
 
-          s.onerror = () => {
-            if (!settled) {
-              settled = true;
-              clearTimeout(to);
-              markDone();
+        s.onmessage = (ev) => {
+          let buf = new Uint8Array(ev.data);
+          if (!buf || buf.length < 2) return;
+          let offset = 0;
+          while (offset < buf.length) {
+            let pktType = buf[offset] & 0xf0;
+            let mult = 1, remLen = 0, i = offset + 1;
+            while (i < buf.length) {
+              let d = buf[i++];
+              remLen += (d & 127) * mult;
+              mult *= 128;
+              if ((d & 128) === 0) break;
             }
-          };
+            let pktEnd = i + remLen;
+            if (pktType === 0x20) { // CONNACK
+              s._mqttReady = true;
+              if (!settled) {
+                settled = true;
+                clearTimeout(to);
+              }
+              this.startKeepAlive();
+              for (let t of this.activeTopics) {
+                this.sendSubToSocket(s, t);
+              }
+              flushWaiters();
+            } else if (pktType === 0x30 && pktEnd <= buf.length) { // PUBLISH
+              let topLen = (buf[i] << 8) | buf[i + 1];
+              let topStart = i + 2;
+              let payStart = topStart + topLen;
+              if (payStart <= pktEnd) {
+                let topic = new TextDecoder().decode(buf.slice(topStart, payStart));
+                let payloadStr = new TextDecoder().decode(buf.slice(payStart, pktEnd));
+                try {
+                  let msg = JSON.parse(payloadStr);
+                  if (msg && msg.type === "game_event" && (msg.evt === "msnap" || msg.evt === "snap")) {
+                    if (!this._burstQueue) this._burstQueue = {};
+                    this._burstQueue[msg.evt] = { msg, topic };
+                  } else {
+                    this.handleInbound(msg, topic);
+                  }
+                } catch {}
+              }
+            }
+            offset = pktEnd;
+            if (remLen < 0 || offset <= 0) break;
+          }
+          if (this._burstQueue) {
+            let q = this._burstQueue;
+            this._burstQueue = null;
+            if (q.snap) this.handleInbound(q.snap.msg, q.snap.topic);
+            if (q.msnap) this.handleInbound(q.msnap.msg, q.msnap.topic);
+          }
+        };
 
-          s.onclose = () => {
-            s._mqttReady = false;
-            this.sockets = this.sockets.filter(x => x !== s);
-            if (!settled) {
-              settled = true;
-              clearTimeout(to);
-              markDone();
+        s.onerror = () => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(to);
+            brokerIdx++;
+            if (brokerIdx < brokers.length) {
+              attachSocket(brokers[brokerIdx], brokerIdx);
+            } else {
+              this.connecting = false;
+              flushWaiters();
             }
-          };
-        } catch {
-          markDone();
-        }
-      });
+          }
+        };
+
+        s.onclose = () => {
+          s._mqttReady = false;
+          this.sockets = this.sockets.filter(x => x !== s);
+          if (!settled) {
+            settled = true;
+            clearTimeout(to);
+            brokerIdx++;
+            if (brokerIdx < brokers.length) {
+              attachSocket(brokers[brokerIdx], brokerIdx);
+            } else {
+              this.connecting = false;
+              flushWaiters();
+            }
+          }
+        };
+      };
+      // Kick off with the first broker
+      attachSocket(brokers[0], 0);
     });
   }
 
