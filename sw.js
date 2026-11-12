@@ -1,4 +1,4 @@
-const CACHE_NAME = 'redbound-app-v2.1.6.0';
+const CACHE_NAME = 'redbound-app-v2.1.6.1';
 const ASSETS = [
   '/',
   '/index.html',
@@ -24,6 +24,13 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Permintaan lintas origin (server cloud / broker) TIDAK disentuh service worker:
+  // gagal jaringan harus sampai ke game apa adanya, bukan diganti file HTML
+  // (fallback HTML ke respons API dulu bisa membuat sesi/progress gagal dibaca).
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -33,6 +40,12 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request).then((res) => res || caches.match('/index.html')))
+      .catch(() => {
+        // Fallback ke shell HANYA untuk navigasi halaman (bukan untuk data/API).
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
+        return caches.match(event.request);
+      })
   );
 });
