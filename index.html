@@ -3485,7 +3485,7 @@ var SafeStorage = {
   }
 };
 var U=class U{constructor(){this.ctx=null;this.master=null;this.sfxBus=null;this.musicBus=null;this.noiseBuf=null;this.musicTimer=null;this.nextStepTime=0;this.step=0;this.musicPlaying=!1;this.musicMode="menu";this.muted=!1;this.musicEnabled=!0}get musicActive(){return this.musicTimer!==null}init(){if(this.ctx){this.ctx.state==="suspended"&&this.ctx.resume();return}try{let e=window.AudioContext??window.webkitAudioContext;this.ctx=new e,this.master=this.ctx.createGain(),this.master.gain.value=this.muted?0:.6,this.master.connect(this.ctx.destination),this.sfxBus=this.ctx.createGain(),this.sfxBus.gain.value=.5,this.sfxBus.connect(this.master),this.musicBus=this.ctx.createGain(),this.musicBus.gain.value=.3,this.musicBus.connect(this.master);let t=this.ctx.sampleRate;this.noiseBuf=this.ctx.createBuffer(1,t,this.ctx.sampleRate);let i=this.noiseBuf.getChannelData(0);for(let s=0;s<t;s++)i[s]=Math.random()*2-1}catch{this.ctx=null}}setMuted(e){this.muted=e,this.master&&this.ctx&&this.master.gain.setTargetAtTime(e?0:.6,this.ctx.currentTime,.05)}setMusic(e){this.musicEnabled=e,e?this.ctx&&this.startMusic(this.musicMode):this.stopMusic(!0)}midi(e){return 440*Math.pow(2,(e-69)/12)}tone(e,t,i,s,a,l=0,o=null){if(!this.ctx)return;let c=o??this.sfxBus;if(!c)return;let d=this.ctx.currentTime+l,r=this.ctx.createOscillator(),p=this.ctx.createGain();r.type=s,r.frequency.setValueAtTime(Math.max(20,e),d),t!==e&&r.frequency.exponentialRampToValueAtTime(Math.max(20,t),d+i),p.gain.setValueAtTime(0,d),p.gain.linearRampToValueAtTime(a,d+.008),p.gain.exponentialRampToValueAtTime(8e-4,d+i),r.connect(p),p.connect(c),r.start(d),r.stop(d+i+.05)}noise(e,t,i,s,a=0,l=1){if(!this.ctx||!this.noiseBuf||!this.sfxBus)return;let o=this.ctx.currentTime+a,c=this.ctx.createBufferSource();c.buffer=this.noiseBuf,c.loop=!0;let d=this.ctx.createBiquadFilter();d.type=i,d.frequency.value=s,d.Q.value=l;let r=this.ctx.createGain();r.gain.setValueAtTime(t,o),r.gain.exponentialRampToValueAtTime(8e-4,o+e),c.connect(d),d.connect(r),r.connect(this.sfxBus),c.start(o),c.stop(o+e+.05)}shoot(){this.ctx&&this.tone(880,320,.09,"square",.045)}hit(){this.ctx&&this.noise(.05,.05,"highpass",2200)}explode(e=1){this.ctx&&(this.noise(.25*e,.16,"lowpass",1400,0,.7),this.tone(160*e,40,.3*e,"sine",.22))}pickup(e=!1){if(!this.ctx)return;let t=e?620:920,i=1+Math.random()*.08;this.tone(t*i,t*1.6*i,.09,"sine",e?.12:.07)}hurt(){this.ctx&&(this.tone(220,70,.22,"sawtooth",.2),this.noise(.12,.1,"lowpass",900))}levelup(){if(!this.ctx)return;[523.25,659.25,783.99,1046.5].forEach((t,i)=>this.tone(t,t,.16,"triangle",.14,i*.07))}bossWarn(){this.ctx&&(this.tone(98,98,.5,"sawtooth",.16),this.tone(103.8,103.8,.5,"sawtooth",.16,.02),this.tone(98,98,.5,"sawtooth",.16,.55))}bossDie(){if(!this.ctx)return;this.noise(.7,.24,"lowpass",900,0,.5),this.tone(180,30,.9,"sine",.3),[392,523.25,659.25,783.99].forEach((t,i)=>this.tone(t,t,.2,"triangle",.1,.3+i*.08))}gameover(){if(!this.ctx)return;[392,329.63,261.63,196].forEach((t,i)=>this.tone(t,t*.98,.35,"triangle",.16,i*.22))}victory(){if(!this.ctx)return;[523.25,659.25,783.99,1046.5,1318.5].forEach((t,i)=>this.tone(t,t,.3,"triangle",.14,i*.12))}click(){this.ctx&&this.tone(700,900,.05,"square",.05)}startMusic(e="battle"){if(!(!this.ctx||!this.musicEnabled)){if(this.musicTimer){if(this.musicMode===e)return;this.stopMusic()}this.musicMode=e,this.musicPlaying=!0,this.step=0,this.nextStepTime=this.ctx.currentTime+.1,this.musicTimer=setInterval(()=>this.schedule(),50)}}stopMusic(e=!1){this.musicTimer&&(clearInterval(this.musicTimer),this.musicTimer=null),e||(this.musicPlaying=!1)}schedule(){if(!this.ctx)return;let e=this.musicMode==="Battle"||this.musicMode==="battle"?64:128;for(;this.nextStepTime<this.ctx.currentTime+.18;)this.musicMode==="login"?this.scheduleLoginStep(this.step,this.nextStepTime):this.musicMode==="menu"?this.scheduleMenuStep(this.step,this.nextStepTime):this.scheduleBattleStep(this.step,this.nextStepTime),this.step=(this.step+1)%e,this.nextStepTime+=this.musicMode==="battle"?U.STEP:U.MENU_STEP}
-scheduleLoginStep(e,t){if(!this.ctx||!this.musicBus)return;let i=Math.floor(e/16),s=e%16,a=U.CHORDS[Math.floor(i/2)%4],l=t-this.ctx.currentTime,o=a.minor?3:4;if(e%32===0){let c=a.root+12;this.pad([this.midi(c-12),this.midi(c),this.midi(c+o),this.midi(c+7)],U.MENU_STEP*30,l)}if(s%4===0){let subNote=a.root-12+(s===12?7:0);this.tone(this.midi(subNote),this.midi(subNote),U.MENU_STEP*3.4,"triangle",.13,l,this.musicBus)}if(s%2===0){let arpNotes=[0,o,7,12,12+o,12,7,o],idx=(s/2+i)%8,note=a.root+12+arpNotes[idx];this.tone(this.midi(note),this.midi(note),.36,"sine",.055,l,this.musicBus);if(s===0||s===8)this.tone(this.midi(note+12),this.midi(note+12),.45,"triangle",.028,l+U.MENU_STEP*.5,this.musicBus)}}pad(e,t,i){if(!this.ctx||!this.musicBus)return;let s=this.ctx.currentTime+i;for(let a of e)for(let l of[1,1.0045]){let o=this.ctx.createOscillator(),c=this.ctx.createBiquadFilter(),d=this.ctx.createGain();o.type="sawtooth",o.frequency.setValueAtTime(a*l,s),c.type="lowpass",c.frequency.setValueAtTime(520,s),c.frequency.linearRampToValueAtTime(1150,s+t*.45),c.frequency.linearRampToValueAtTime(420,s+t),d.gain.setValueAtTime(0,s),d.gain.linearRampToValueAtTime(.014,s+.9),d.gain.setValueAtTime(.014,s+t*.6),d.gain.linearRampToValueAtTime(0,s+t),o.connect(c),c.connect(d),d.connect(this.musicBus),o.start(s),o.stop(s+t+.1)}}scheduleMenuStep(e,t){if(!this.ctx||!this.musicBus)return;let i=Math.floor(e/16),s=e%16,a=U.CHORDS[Math.floor(i/2)%4],l=t-this.ctx.currentTime,o=a.minor?3:4;if(e%32===0){let c=a.root+12;this.pad([this.midi(c),this.midi(c+o),this.midi(c+7),this.midi(c+12)],U.MENU_STEP*30,l)}if(s===0&&this.tone(this.midi(a.root-12),this.midi(a.root-12),U.MENU_STEP*7,"sine",.15,l,this.musicBus),s===10&&this.tone(this.midi(a.root-5),this.midi(a.root-5),U.MENU_STEP*3,"sine",.08,l,this.musicBus),s===4||s===12){let c=(e>>2)%8,d=a.root+24+U.ARP[c];this.tone(this.midi(d),this.midi(d),.5,"triangle",.042,l,this.musicBus),this.tone(this.midi(d),this.midi(d),.42,"triangle",.019,l+U.MENU_STEP*1.5,this.musicBus)}if(s===8&&this.noiseBuf){let c=this.ctx.createBufferSource();c.buffer=this.noiseBuf,c.loop=!0;let d=this.ctx.createBiquadFilter();d.type="highpass",d.frequency.value=8e3;let r=this.ctx.createGain();r.gain.setValueAtTime(.016,t),r.gain.exponentialRampToValueAtTime(8e-4,t+.05),c.connect(d),d.connect(r),r.connect(this.musicBus),c.start(t),c.stop(t+.09)}}scheduleBattleStep(e,t){if(!this.ctx||!this.musicBus)return;let i=Math.floor(e/16),s=e%16,a=U.CHORDS[i],l=t-this.ctx.currentTime;if(s%4===0&&this.tone(150,42,.16,"sine",.3,l,this.musicBus),s%2===0){let o=s===14?12:0;this.tone(this.midi(a.root-12+o),this.midi(a.root-12+o),U.STEP*1.8,"triangle",.14,l,this.musicBus)}{let c=a.minor?15:16,d=U.ARP.map(b=>b===16?c:b),r=s%8,p=a.root+12+d[r],m=s%2===0?.05:.032;this.tone(this.midi(p),this.midi(p),U.STEP*.9,"square",m,l,this.musicBus)}if(s%4===2&&this.noiseBuf){let o=this.ctx.createBufferSource();o.buffer=this.noiseBuf,o.loop=!0;let c=this.ctx.createBiquadFilter();c.type="highpass",c.frequency.value=7e3;let d=this.ctx.createGain();d.gain.setValueAtTime(.05,t),d.gain.exponentialRampToValueAtTime(8e-4,t+.04),o.connect(c),c.connect(d),d.connect(this.musicBus),o.start(t),o.stop(t+.08)}}destroy(){this.stopMusic(),this.ctx&&(this.ctx.close().catch(()=>{}),this.ctx=null)}};U.TEMPO=118,U.STEP=60/U.TEMPO/4,U.MENU_TEMPO=76,U.MENU_STEP=60/U.MENU_TEMPO/4,U.CHORDS=[{root:45,minor:!0},{root:41,minor:!1},{root:48,minor:!1},{root:43,minor:!1}],U.ARP=[0,7,12,16,12,7,0,7];var ft=U;var ae=[{id:"volt",name:"VOLT",title:["Standard Technician","Teknisi Standar"],icon:"\u2726",color:"#22d3ee",startWeapon:"bolt",desc:["Balanced & reliable. Slightly higher damage \u2014 fits any play style.","Seimbang & andal. Damage sedikit lebih tinggi \u2014 cocok untuk semua gaya bermain."],mods:{hp:100,speed:1,damage:1.1,xp:1,magnet:1,regen:0}},{id:"nyx",name:"NYX",title:["Crossing Shadow","Bayangan Lintas"],icon:"\u2727",color:"#f472b6",startWeapon:"orbit",desc:["Fast & slippery with a wide magnet, but fragile.","Cepat & licin dengan magnet luas, tapi hidupnya tipis."],mods:{hp:85,speed:1.12,damage:1,xp:1,magnet:1.45,regen:0},unlock:{hint:["Reach player level 5 in one run","Capai level pemain 5 dalam satu permainan"],check:n=>n.level>=5}},{id:"titan",name:"TITAN",title:["Corrosion Fortress","Benteng Korosi"],icon:"\u2B23",color:"#fb923c",startWeapon:"nova",desc:["Extremely tough & regenerating, but slow.","Sangat kokoh & beregenerasi, tapi geraknya lambat."],mods:{hp:150,speed:.86,damage:1,xp:1,magnet:1,regen:1},unlock:{hint:["Defeat 1 boss","Kalahkan 1 boss"],check:n=>n.bosses>=1}},{id:"wisp",name:"WISP",title:["Light Signal","Sinyal Cahaya"],icon:"\u2756",color:"#a3e635",startWeapon:"frost",desc:["Fastest in the arena & rich in XP \u2014 nearly glass-thin.","Tercepat di arena & kaya XP \u2014 nyaris rapuh seperti kaca."],mods:{hp:75,speed:1.22,damage:1,xp:1.3,magnet:1.1,regen:0},unlock:{hint:["Survive 5 minutes in one run","Bertahan 5 menit dalam satu permainan"],check:n=>n.time>=300}},{id:"strix",name:"STRIX",title:["Storm Weaver","Penenun Badai"],icon:"\u26A1",color:"#facc15",startWeapon:"chain",desc:["Chain lightning leaps between enemies \u2014 a crowd-cleaning machine.","Rantai petir melompat antar musuh \u2014 mesin pembersih gerombolan."],mods:{hp:90,speed:1.05,damage:.95,xp:1,magnet:1,regen:0},unlock:{hint:["Defeat 3 bosses in one run","Kalahkan 3 boss dalam satu permainan"],check:n=>n.bosses>=3}},{id:"dart",name:"DART",title:["Locking Arrow","Panah Pengunci"],icon:"\u27A4",color:"#f87171",startWeapon:"missile",desc:["Hunter missiles that always find their target \u2014 calm, steady, dependable.","Misil pemburu yang selalu menemukan sasarannya \u2014 tenang, stabil, tepercaya."],mods:{hp:95,speed:1.02,damage:1,xp:1,magnet:1.05,regen:0},unlock:{hint:["Reach phase 5 (Time Attack) or mission 5 (Mission/Duet)","Capai fase 5 (Time Attack) atau misi 5 (Mission/Duet)"],check:n=>n.phase>=5}},{id:"lux",name:"LUX",title:["Piercing Beam","Sinar Menembus"],icon:"\u25B2",color:"#f0abfc",startWeapon:"prisma",desc:["Prism beams pierce enemy lines at once \u2014 precision amid the chaos.","Sinar prisma menembus barisan musuh sekaligus \u2014 presisi di tengah keramaian."],mods:{hp:80,speed:1.08,damage:1,xp:1.15,magnet:1,regen:0},unlock:{hint:["Reach player level 12 in one run","Capai level pemain 12 dalam satu permainan"],check:n=>n.level>=12}},{id:"void",name:"VOID",title:["The Gravity","Sang Gravitasi"],icon:"\u2B24",color:"#818cf8",startWeapon:"singularity",desc:["Tears space open \u2014 pulls and crushes crowds into one point.","Melubangi ruang \u2014 menarik dan menghimpit gerombolan ke satu titik."],mods:{hp:90,speed:.95,damage:1.05,xp:1,magnet:1.2,regen:0},unlock:{hint:["Score 20,000 points in one run","Raih 20.000 poin dalam satu permainan"],check:n=>n.score>=2e4}}],Qe={volt:"lux",lux:"volt",nyx:"wisp",wisp:"nyx",titan:"strix",strix:"titan",dart:"void",void:"dart"};function ee(n){return ae.find(e=>e.id===n)??ae[0]}var Fs="neon-survivor:lang-v2",fe="en",Ns=!1,Gs=new Set;function Ws(){if(!(Ns||typeof window>"u")){Ns=!0;try{let n=SafeStorage.getItem(Fs);if((n==="en"||n==="id")&&n!==fe){fe=n;for(let e of Gs)e(n)}}catch{}}}function Ee(){return fe}function Sn(n){if(n!==fe){fe=n;try{SafeStorage.setItem(Fs,n)}catch{}for(let e of Gs)e(n)}}function Us(){Sn(fe==="en"?"id":"en")}function h(n,e){return fe==="en"?n:e}function v(n){return typeof n=="string"?n:fe==="en"?n[0]:n[1]}function F(n){return n.toLocaleString(fe==="en"?"en-US":"id-ID")}var Mn=6,Tn=6,oe=5,Y={bolt:{id:"bolt",name:["Bolt Plasma","Bolt Plasma"],icon:"\u2726",color:"#22d3ee",tagline:["Fires at the nearest enemy automatically.","Menembak musuh terdekat secara otomatis."],levelDesc:[["Fires 1 projectile at the nearest enemy.","Tembak 1 proyektil ke musuh terdekat."],["+1 projectile per shot.","+1 proyektil per tembakan."],["More damage & faster cooldown.","Damage naik & cooldown lebih cepat."],["+1 projectile per shot.","+1 proyektil per tembakan."],["4 projectiles, big damage, pierces 1 enemy.","4 proyektil, damage besar, menembus 1 musuh."]]},orbit:{id:"orbit",name:["Orbit Blades","Bilah Orbit"],icon:"\u2727",color:"#f472b6",tagline:["Energy blades orbiting and shielding you.","Bilah energi yang berputar melindungimu."],levelDesc:[["2 blades spin around you.","2 bilah berputar mengitari dirimu."],["+1 blade.","+1 bilah."],["More damage & faster rotation.","Damage & kecepatan rotasi naik."],["+1 blade.","+1 bilah."],["6 large blades with maximum damage.","6 bilah besar dengan damage maksimal."]]},nova:{id:"nova",name:["Nova Wave","Nova Gelombang"],icon:"\u25CE",color:"#a3e635",tagline:["A shockwave that slams every direction.","Gelombang kejut yang menghantam semua arah."],levelDesc:[["A shock pulse expands from you.","Pulsa kejut meluas dari dirimu."],["Bigger radius & damage.","Radius & damage naik."],["Shorter cooldown.","Cooldown lebih singkat."],["Bigger radius & damage again.","Radius & damage naik lagi."],["A giant blast at close range.","Ledakan raksasa berkerapatan pendek."]]},chain:{id:"chain",name:["Chain Thunder","Guntur Berantai"],icon:"\u26A1",color:"#facc15",tagline:["Lightning that leaps between enemies.","Petir yang melompat antar musuh."],levelDesc:[["Strikes the nearest enemy.","Menyambar musuh terdekat."],["Leaps to 3 enemies.","Melompat ke 3 musuh."],["More damage.","Damage naik."],["Leaps to 5 enemies.","Melompat ke 5 musuh."],["7 leaps with devastating damage.","7 lompatan dengan damage dahsyat."]]},missile:{id:"missile",name:["Hunter Missile","Misil Pemburu"],icon:"\u27A4",color:"#fb923c",tagline:["Homing rockets with area explosions.","Roket penjejak dengan ledakan area."],levelDesc:[["Fires 1 homing missile.","Menembak 1 misil penjejak."],["+1 missile.","+1 misil."],["Bigger explosion.","Ledakan lebih besar."],["+1 missile & more damage.","+1 misil & damage naik."],["3 missiles with massive blasts.","3 misil berledak hebat."]]},frost:{id:"frost",name:["Frost Aura","Aura Beku"],icon:"\u2744",color:"#7dd3fc",tagline:["A cold aura that slows & hurts.","Aura dingin yang memperlambat & melukai."],levelDesc:[["Slows enemies near you.","Memperlambat musuh di dekatmu."],["Bigger radius & more damage per second.","Radius & damage per detik naik."],["Enemies move slower inside the aura.","Musuh lebih lambat di dalam aura."],["Bigger radius & damage again.","Radius & damage naik lagi."],["A vast frozen area with sharp damage.","Daerah beku luas dengan damage tajam."]]},prisma:{id:"prisma",name:["Prism Beam","Prisma Sinar"],icon:"\u25B2",color:"#e879f9",tagline:["Laser beams that pierce every enemy in a straight line.","Sinar laser yang menembus semua musuh dalam garis lurus."],levelDesc:[["Fires a beam at the nearest enemy, piercing everything on its path.","Menembakkan sinar ke musuh terdekat, menembus semua di jalurnya."],["More damage & longer beam.","Damage & panjang sinar naik."],["A second beam fires the opposite way.","Sinar kedua menyambar ke arah sebaliknya."],["More damage & wider beam.","Damage & lebar sinar naik."],["3 beams crossing in every direction.","3 sinar menyilang ke segala arah."]]},singularity:{id:"singularity",name:["Singularity","Singularitas"],icon:"\u2B24",color:"#a78bfa",tagline:["A black hole pulling & crushing enemy crowds.","Lubang hitam yang menarik & meremas gerombolan musuh."],levelDesc:[["The black hole pulls enemies & crushes them at its core.","Lubang hitam menarik musuh & meremasnya di intinya."],["Stronger pull & more damage.","Tarikan lebih kuat & damage naik."],["Longer duration, wider pull radius.","Durasi lebih lama, radius tarik melebar."],["Core damage rises sharply.","Damage inti naik tajam."],["Explodes violently when the hole collapses.","Meledak dahsyat saat lubangnya runtuh."]]}},Ce={speed:{id:"speed",name:["Wind Shoes","Sepatu Angin"],icon:"\xBB",color:"#4ade80",tagline:[" Move faster."," Bergerak lebih cepat."],levelDesc:[["Move speed +10%.","Kecepatan gerak +10%."],["Move speed +20%.","Kecepatan gerak +20%."],["Move speed +30%.","Kecepatan gerak +30%."],["Move speed +40%.","Kecepatan gerak +40%."],["Move speed +55%.","Kecepatan gerak +55%."]]},maxhp:{id:"maxhp",name:["Iron Heart","Jantung Baja"],icon:"\u2665",color:"#f87171",tagline:["More HP, instantly healed.","Darah lebih banyak, langsung dipulihkan."],levelDesc:[["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +30 & heal 30 HP.","HP maks +30 & pulih 30 HP."]]},damage:{id:"damage",name:["Eagle Eye","Mata Elang"],icon:"\u2716",color:"#fb7185",tagline:["All weapons hurt more.","Semua senjata lebih sakit."],levelDesc:[["All weapon damage +12%.","Damage semua senjata +12%."],["All weapon damage +24%.","Damage semua senjata +24%."],["All weapon damage +36%.","Damage semua senjata +36%."],["All weapon damage +48%.","Damage semua senjata +48%."],["All weapon damage +65%.","Damage semua senjata +65%."]]},magnet:{id:"magnet",name:["Magnet Amulet","Amulet Magnet"],icon:"\u2299",color:"#c084fc",tagline:["Pulls XP crystals from farther away.","Menarik kristal XP dari lebih jauh."],levelDesc:[["Pickup radius +30%.","Radius tarik +30%."],["Pickup radius +60%.","Radius tarik +60%."],["Pickup radius +90%.","Radius tarik +90%."],["Pickup radius +125%.","Radius tarik +125%."],["Pickup radius +170%.","Radius tarik +170%."]]},haste:{id:"haste",name:["Hourglass","Jam Pasir"],icon:"\u25CC",color:"#fde047",tagline:["Faster weapon cooldowns.","Cooldown senjata lebih cepat."],levelDesc:[["Cooldown -7%.","Cooldown -7%."],["Cooldown -14%.","Cooldown -14%."],["Cooldown -21%.","Cooldown -21%."],["Cooldown -28%.","Cooldown -28%."],["Cooldown -35%.","Cooldown -35%."]]},xpgain:{id:"xpgain",name:["XP Catalyst","Kristal Ilmu"],icon:"\u25C6",color:"#34d399",tagline:["Gain more XP.","XP yang didapat bertambah."],levelDesc:[["XP +12%.","XP +12%."],["XP +24%.","XP +24%."],["XP +36%.","XP +36%."],["XP +48%.","XP +48%."],["XP +65%.","XP +65%."]]},regen:{id:"regen",name:["Regeneration","Regenerasi"],icon:"\u271A",color:"#f9a8d4",tagline:["Slowly heal HP every second.","Pulihkan HP perlahan setiap detik."],levelDesc:[["Heal 0.6 HP/s.","Pulih 0.6 HP/detik."],["Heal 1.2 HP/s.","Pulih 1.2 HP/detik."],["Heal 1.8 HP/s.","Pulih 1.8 HP/detik."],["Heal 2.4 HP/s.","Pulih 2.4 HP/detik."],["Heal 3.5 HP/s.","Pulih 3.5 HP/detik."]]}},ke=[{weapon:"bolt",passive:"damage",name:["Tempest Reactor","Tempest Reaktor"],icon:"\u2739",color:"#67e8f9",tagline:["High-speed twin shots that pierce 3 enemies.","Tembakan kembar berkecepatan tinggi yang menembus 3 musuh."]},{weapon:"orbit",passive:"speed",name:["Shadow Scythe","Sabit Bayangan"],icon:"\u263E",color:"#f0abfc",tagline:["2 counter-rotating orbit blade layers with a wider radius.","2 lapis bilah orbit berlawanan arah dengan radius lebih luas."]},{weapon:"nova",passive:"maxhp",name:["Core Supernova","Supernova Inti"],icon:"\u273A",color:"#bef264",tagline:["A giant blast that leaves a burning fire ring.","Ledakan raksasa yang meninggalkan cincin api membakar."]},{weapon:"frost",passive:"magnet",name:["Absolute Zero","Nol Absolut"],icon:"\u2746",color:"#bae6fd",tagline:["Enemies touched by the aura freeze for a moment.","Musuh yang tersentuh aura membeku sesaat."]},{weapon:"chain",passive:"haste",name:["Sky Chain","Rantai Langit"],icon:"\u26A1",color:"#fde047",tagline:["+2 leaps with longer reach, lightning can crit.","Lompatan +2 ke jangkauan lebih jauh, petir bisa mengkritikal."]},{weapon:"missile",passive:"xpgain",name:["Missile Belt","Sabuk Misil"],icon:"\u2738",color:"#f87171",tagline:["6 missiles per shot with a wider explosion.","6 misil tiap tembakan dengan ledakan yang lebih lebar."]},{weapon:"prisma",passive:"damage",name:["Spectrum Spear","Tombak Spektrum"],icon:"\u25C8",color:"#fdf4ff",tagline:["4 crossing spectrum beams, total pierce, faster.","4 sinar spektrum menyilang, menembus total lebih cepat."]},{weapon:"singularity",passive:"regen",name:["Black Hole","Lubang Hitam"],icon:"\u25C9",color:"#c4b5fd",tagline:["Stronger suction & crushes enemies at its center.","Hisap lebih kuat & meremas musuh di pusatnya."]}];function Qt(n){return ke.find(e=>e.weapon===n)}var wn={id:"heal",kind:"filler",name:"Kit Medis",icon:"\u271A",color:"#f87171",level:0,isNew:!1,description:"Pulihkan 50 HP sekarang juga."};function En(){return{...wn,name:v(["Med Kit","Kit Medis"]),description:v(["Restore 50 HP right now.","Pulihkan 50 HP sekarang juga."])}}function Oe(n){let e=[],t=Object.keys(Y),i=t.filter(r=>(n.weapons[r]??0)>0).length;for(let r of t){let p=n.weapons[r]??0;if(p>=oe||p===0&&i>=Mn)continue;let m=Y[r];e.push({id:r,kind:"weapon",name:v(m.name),icon:m.icon,color:m.color,level:p+1,isNew:p===0,description:v(m.levelDesc[p]??m.tagline)})}let s=Object.keys(Ce),a=s.filter(r=>(n.passives[r]??0)>0).length;for(let r of s){let p=n.passives[r]??0;if(p>=oe||p===0&&a>=Tn)continue;let m=Ce[r];e.push({id:r,kind:"passive",name:v(m.name),icon:m.icon,color:m.color,level:p+1,isNew:p===0,description:v(m.levelDesc[p]??m.tagline)})}let l=r=>ke.some(p=>p.passive===r&&(n.weapons[p.weapon]??0)>=oe&&(n.passives[r]??0)<oe),o=r=>{let p=Qt(r);return!!p&&(n.passives[p.passive]??0)>=oe&&(n.weapons[r]??0)<oe},c=[];for(let r of e){let p=r.kind==="weapon"?(n.weapons[r.id]??0)>0:(n.passives[r.id]??0)>0,b=(r.kind==="weapon"?o(r.id):l(r.id))?5:p?2:1;for(let g=0;g<b;g++)c.push(r)}let d=[];for(;d.length<3&&c.length>0;){let r=Math.floor(Math.random()*c.length),p=c[r];d.some(m=>m.id===p.id)||d.push(p);for(let m=c.length-1;m>=0;m--)c[m].id===p.id&&c.splice(m,1)}for(;d.length<3;)d.push(En());return d}var Cn={dmg:0,cd:0,speed:0,maxhp:0,maxhpMul:1,range:0,xp:0,magnet:0,bit:0,regen:0,regenMul:1},Ze=[{id:"power",name:["Power Cell","Power Cell"],icon:"\u{1F50B}",color:"#fb7185",desc:["All weapon damage +6%","Damage semua senjata +6%"],maxStack:6,baseCost:24,mods:{dmg:.06}},{id:"coolant",name:["Coolant","Coolant"],icon:"\u2744",color:"#7dd3fc",desc:["Weapon cooldown \u22124%","Cooldown senjata \u22124%"],maxStack:6,baseCost:26,mods:{cd:.04}},{id:"thruster",name:["Thruster","Thruster"],icon:"\xBB",color:"#4ade80",desc:["Move speed +4%","Kecepatan gerak +4%"],maxStack:5,baseCost:22,mods:{speed:.04}},{id:"plating",name:["Plating","Plating"],icon:"\u25A3",color:"#f87171",desc:["Max HP +15 & heal 15","HP Maks +15 & pulih 15"],maxStack:5,baseCost:28,mods:{maxhp:15}},{id:"scope",name:["Scope","Scope"],icon:"\u{1F52D}",color:"#22d3ee",desc:["Weapon range +8%","Jangkauan senjata +8%"],maxStack:5,baseCost:25,mods:{range:.08}},{id:"lens",name:["Lens","Lens"],icon:"\u25C6",color:"#34d399",desc:["XP gain +10%","Perolehan XP +10%"],maxStack:5,baseCost:24,mods:{xp:.1}},{id:"coil",name:["Magnet Coil","Lilin Magnet"],icon:"\u2299",color:"#c084fc",desc:["Pickup radius +15%","Radius pungut +15%"],maxStack:4,baseCost:20,mods:{magnet:.15}},{id:"nano",name:["Nano Repair","Nano Perbaikan"],icon:"\u271A",color:"#f9a8d4",desc:["Regen +0.4 HP/s","Regen +0,4 HP/dtk"],maxStack:4,baseCost:26,mods:{regen:.4}},{id:"antenna",name:["Bit Antenna","Antena Bit"],icon:"\u25C7",color:"#fbbf24",desc:["BIT from crystals +12%","BIT dari kristal +12%"],maxStack:4,baseCost:22,mods:{bit:.12}}],Le=new Map(Ze.map(n=>[n.id,n])),bt=[{id:"repair",name:["Repair Kit","Kit Perbaikan"],icon:"\u271A",color:"#4ade80",desc:["Restore 50% HP now","Pulihkan 50% HP sekarang"],baseCost:25,inflate:!0},{id:"freeze",name:["Freeze Start","Mulai Beku"],icon:"\u2744",color:"#7dd3fc",desc:["Next phase: enemies frozen 3s","Fase berikutnya: musuh beku 3 dtk"],baseCost:30,inflate:!0},{id:"scorechip",name:["Score Chip","Chip Skor"],icon:"\u27162",color:"#fbbf24",desc:["Final score +3% (max 3)","Skor akhir +3% (maks 3)"],baseCost:80,inflate:!0},{id:"secondlife",name:["Second Life","Nyawa Kedua"],icon:"\u2665",color:"#f87171",desc:["+1 revive this run (solo modes)","+1 kebangkitan ronde ini (mode solo)"],baseCost:200,inflate:!1}],re=new Map(bt.map(n=>[n.id,n])),et=[{id:"sightlock",name:["SIGHTLOCK","SIGHTLOCK"],icon:"\u{1F3AF}",color:"#fb7185",bonus:["Damage +30%","Damage +30%"],minus:["Range \u221215%","Jangkauan \u221215%"],tier:1,baseCost:70,mods:{dmg:.3,range:-.15}},{id:"greedchip",name:["GREED CHIP","GREED CHIP"],icon:"\u25C7",color:"#fbbf24",bonus:["BIT from crystals +50%","BIT dari kristal +50%"],minus:["Damage \u221210%","Damage \u221210%"],tier:1,baseCost:70,mods:{bit:.5,dmg:-.1}},{id:"hairtrigger",name:["HAIR TRIGGER","HAIR TRIGGER"],icon:"\u25CC",color:"#fde047",bonus:["Cooldown \u221218%","Cooldown \u221218%"],minus:["Regen \u221250%","Regen \u221250%"],tier:2,baseCost:80,mods:{cd:.18,regenMul:.5}},{id:"longbarrel",name:["LONG BARREL","LONG BARREL"],icon:"\u{1F52D}",color:"#22d3ee",bonus:["Range +35%","Jangkauan +35%"],minus:["Move speed \u22126%","Kecepatan gerak \u22126%"],tier:3,baseCost:80,mods:{range:.35,speed:-.06}},{id:"focuslens",name:["FOCUS LENS","FOCUS LENS"],icon:"\u25C6",color:"#34d399",bonus:["XP +40%","XP +40%"],minus:["Pickup radius \u221225%","Radius pungut \u221225%"],tier:3,baseCost:85,mods:{xp:.4,magnet:-.25}},{id:"glasscore",name:["GLASS CORE","GLASS CORE"],icon:"\u{1F4A0}",color:"#e879f9",bonus:["Damage +45%","Damage +45%"],minus:["Max HP \u221212%","HP Maks \u221212%"],tier:4,baseCost:100,mods:{dmg:.45,maxhpMul:.88}},{id:"prismshard",name:["PRISM SHARD","PRISM SHARD"],icon:"\u25C8",color:"#e879f9",bonus:["Range +20% & cooldown \u221210%","Jangkauan +20% & cooldown \u221210%"],minus:["BIT from crystals \u221230%","BIT dari kristal \u221230%"],tier:5,baseCost:110,mods:{range:.2,cd:.1,bit:-.3}}],Pe=new Map(et.map(n=>[n.id,n]));function Vs(){return{chips:{},overclocks:[],secondLife:0,scoreChips:0}}function le(n){let e={...Cn};for(let[t,i]of Object.entries(n.chips)){if(!i)continue;let s=Le.get(t);if(s)for(let a=0;a<i;a++)Ks(e,s.mods)}for(let t of n.overclocks){let i=Pe.get(t);i&&Ks(e,i.mods)}return e.cd=Math.min(.7,e.cd),e.dmg=Math.max(-.6,e.dmg),e.range=Math.max(-.6,e.range),e.speed=Math.max(-.4,e.speed),e.magnet=Math.max(-.75,e.magnet),e.bit=Math.max(-.75,e.bit),e.regenMul=Math.max(0,e.regenMul),e.maxhpMul=Math.max(.3,e.maxhpMul),e}function Ks(n,e){e.dmg&&(n.dmg+=e.dmg),e.cd&&(n.cd+=e.cd),e.speed&&(n.speed+=e.speed),e.maxhp&&(n.maxhp+=e.maxhp),e.maxhpMul&&(n.maxhpMul*=e.maxhpMul),e.range&&(n.range+=e.range),e.xp&&(n.xp+=e.xp),e.magnet&&(n.magnet+=e.magnet),e.bit&&(n.bit+=e.bit),e.regen&&(n.regen+=e.regen),e.regenMul&&(n.regenMul*=e.regenMul)}function Zt(n){return 1+.45*Math.max(0,n-1)}function ei(n,e,t){return Math.ceil(n.baseCost*Math.pow(1.35,e)*Zt(t))}function ti(n,e){return Math.ceil(n.baseCost*(n.inflate?Zt(e):1))}function ii(n,e){return Math.ceil(n.baseCost*Zt(e))}function si(n){return 10+5*n}var Ln=10;function ni(n){let e=n.rng??Math.random,t=[],i=1+(e()<.5?1:0),s=1+(e()<.4?1:0),a=Ln-i-s,l=Ze.filter(m=>(n.build.chips[m.id]??0)<m.maxStack),o=[];for(let m=0;m<a&&l.length>0;m++){let b=Math.floor(e()*l.length),g=l.splice(b,1)[0];g&&o.push(g)}for(let m of o)t.push({slot:t.length,kind:"chip",id:m.id,cost:ei(m,n.build.chips[m.id]??0,n.visit),sold:!1});let c=[re.get("repair")];n.allowSecondLife&&n.build.secondLife===0&&c.push(re.get("secondlife")),n.build.scoreChips<3&&c.push(re.get("scorechip")),c.push(re.get("freeze"));let d=[];for(let m=0;m<s&&c.length>0;m++){let b=Math.floor(e()*c.length),g=c.splice(b,1)[0];g&&d.push(g)}for(let m of d)t.push({slot:t.length,kind:"service",id:m.id,cost:ti(m,n.visit),sold:!1});let r=et.filter(m=>m.tier<=n.phase&&!n.build.overclocks.includes(m.id)),p=[];for(let m=0;m<i&&r.length>0;m++){let b=Math.floor(e()*r.length),g=r.splice(b,1)[0];g&&p.push(g)}for(let m of p)t.push({slot:t.length,kind:"overclock",id:m.id,cost:ii(m,n.visit),sold:!1});for(let m=t.length-1;m>0;m--){let b=Math.floor(e()*(m+1)),g=t[m];t[m]=t[b],t[b]=g}return t.forEach((m,b)=>{m.slot=b}),t}var Pn={bolt:["power","coolant","scope"],prisma:["power","coolant","scope"],chain:["coolant","power","scope"],missile:["power","scope","coolant"],orbit:["power","plating","thruster"],nova:["plating","power","coolant"],frost:["power","coil","plating"],singularity:["power","coil","plating"]},An=["orbit","nova","frost","singularity"];function Dn(n,e,t){switch(e){case"sightlock":return An.includes(n);case"greedchip":return!0;case"hairtrigger":return(t.chips.nano??0)===0;case"longbarrel":return!0;case"focuslens":return(t.chips.coil??0)<2;case"glasscore":return(t.chips.plating??0)>=1;case"prismshard":return(t.chips.antenna??0)===0;default:return!1}}function js(n){let e=n.rng??Math.random,t=[],i=n.wallet,s=n.items.filter(o=>!o.sold),a=o=>{t.push({slot:o.slot,id:o.id,cost:o.cost}),i-=o.cost,o.sold=!0};if(n.hpFrac<.4){let o=s.find(c=>c.kind==="service"&&c.id==="repair"&&c.cost<=i);o&&a(o)}let l=Pn[n.weapon]??["power"];for(let o of l){if(i<=0)break;let c=s.find(d=>!d.sold&&d.kind==="chip"&&d.id===o&&d.cost<=i);c&&e()<.8&&a(c)}for(let o of s)o.sold||o.kind!=="overclock"||o.cost>i||Dn(n.weapon,o.id,n.build)&&i-o.cost>=30&&a(o);if(i>0&&i<60){let o=s.find(c=>!c.sold&&c.kind==="chip"&&c.cost<=i);o&&a(o)}return t}var qs=[{id:"vitality",name:["Vitality","Vitalitas"],icon:"\u2665",color:"#f87171",max:5,cost:[20,50,120,250,450],reqTrophy:[0,0,0,200,500],desc:n=>v([`Starting HP +${n*12}`,`HP awal +${n*12}`])},{id:"power",name:["Firepower","Daya Rusak"],icon:"\u2716",color:"#fb7185",max:5,cost:[25,60,140,280,500],reqTrophy:[0,0,0,200,500],desc:n=>v([`All weapon damage +${n*5}%`,`Damage semua senjata +${n*5}%`])},{id:"swiftness",name:["Swiftness","Kecepatan"],icon:"\xBB",color:"#4ade80",max:5,cost:[20,50,120,250,450],reqTrophy:[0,0,0,200,500],desc:n=>v([`Move speed +${n*3}%`,`Kecepatan gerak +${n*3}%`])},{id:"magnetism",name:["Magnetism","Magnetisme"],icon:"\u2299",color:"#c084fc",max:5,cost:[18,45,100,220,400],reqTrophy:[0,0,0,200,500],desc:n=>v([`Magnet radius +${n*15}%`,`Radius magnet +${n*15}%`])},{id:"greed",name:["XP Catalyst","Katalis XP"],icon:"\u25C6",color:"#34d399",max:5,cost:[20,50,120,250,450],reqTrophy:[0,0,0,200,500],desc:n=>v([`XP gain +${n*8}%`,`Perolehan XP +${n*8}%`])},{id:"guardian",name:["Emergency Shield","Perisai Darurat"],icon:"\u2B21",color:"#22d3ee",max:2,cost:[120,320],reqTrophy:[100,400],desc:n=>n>0?v([`Start with ${n} shields (each blocks 1 hit)`,`Mulai dengan ${n} perisai (menahan 1 pukulan)`]):v(["Start with 1 shield (blocks 1 hit)","Mulai dengan 1 perisai (menahan 1 pukulan)"])},{id:"revive",name:["Second Wind","Napas Kedua"],icon:"\u271A",color:"#4ade80",max:1,cost:[450],reqTrophy:[350],desc:()=>v(["Once per run: cheat death with 50% HP (solo modes \u2014 never against the red line)","Sekali per ronde: selamat dari maut dengan 50% HP (mode solo \u2014 tak berlaku di garis merah)"])},{id:"tuner",name:["Core Tuner","Tuner Inti"],icon:"\u2B21",color:"#e879f9",max:5,cost:[35,80,170,320,550],reqTrophy:[0,0,0,200,500],desc:n=>v([`Neon Cores from runs +${n*8}%`,`Inti Neon dari ronde +${n*8}%`])}],Ne=[{id:"none",name:["Default","Bawaan"],color:"",cost:0,reqTrophy:0},{id:"gold",name:["Gold Rush","Serbuan Emas"],color:"#fbbf24",cost:200,reqTrophy:100},{id:"magenta",name:["Hot Magenta","Magenta Panas"],color:"#f472b6",cost:200,reqTrophy:100},{id:"lime",name:["Toxic Lime","Lime Toksik"],color:"#a3e635",cost:200,reqTrophy:100},{id:"white",name:["White Heat","Panas Putih"],color:"#e0fbff",cost:350,reqTrophy:300},{id:"magma",name:["Magma Flow","Arus Magma"],color:"#ff5a1f",cost:0,reqTrophy:0,exclusive:!0}],Ae=[{id:"default",name:["Factory","Bawaan"],shape:"tri",color:"",cost:0,reqTrophy:0},{id:"sakura",name:["Sakura","Sakura"],shape:"tri",color:"#f9a8d4",cost:180,reqTrophy:0},{id:"toxic",name:["Toxic","Toksik"],shape:"tri",color:"#a3e635",cost:180,reqTrophy:0},{id:"frost",name:["Frost","Beku"],shape:"tri",color:"#7dd3fc",cost:180,reqTrophy:50},{id:"ember",name:["Ember","Bara"],shape:"tri",color:"#fb923c",cost:180,reqTrophy:50},{id:"gold",name:["Gold","Emas"],shape:"tri",color:"#fbbf24",cost:320,reqTrophy:150},{id:"chrome",name:["Chrome","Krom"],shape:"tri",color:"#e2e8f0",cost:320,reqTrophy:150},{id:"arrow",name:["Arrow Frame","Rangka Panah"],shape:"arrow",color:"",cost:520,reqTrophy:400},{id:"diamond",name:["Diamond Frame","Rangka Berlian"],shape:"diamond",color:"",cost:520,reqTrophy:400},{id:"magma",name:["Volcanic Magma","Magma Vulkanik"],shape:"magma",color:"#ff6d3a",cost:1800,reqTrophy:1000,tier:"epic"}],Ie=[{id:"none",name:["No Effect","Tanpa Efek"],desc:["Plain ship \u2014 no glow","Kapal polos \u2014 tanpa cahaya"],cost:0,reqTrophy:0,c1:"",c2:""},{id:"aurora",name:["Aurora","Aurora"],desc:["Two green-cyan light arcs orbiting the ship + comet trail while moving","Dua busur cahaya hijau-sian mengorbit kapal + jejak komet saat bergerak"],cost:480,reqTrophy:350,c1:"#34d399",c2:"#22d3ee"},{id:"supernova",name:["Supernova","Supernova"],desc:["Flickering solar flare aura with 4 light rays + ember sparks while moving","Aura suar matahari berkelap-kelip 4 sinar + percikan bara saat bergerak"],cost:750,reqTrophy:650,c1:"#fb923c",c2:"#ef4444"},{id:"void",name:["Void Ring","Cincin Void"],desc:["Twin counter-rotating violet rings + gravity star trail while moving","Cincin ungu kembar berlawanan putaran + jejak bintang gravitasi saat bergerak"],cost:1100,reqTrophy:950,c1:"#a78bfa",c2:"#7c3aed"},{id:"magma",name:["Magma Core","Inti Magma"],desc:["Molten lava halo with 3 orbiting embers \u2014 bundled with Volcanic Magma skin","Halo lava meleleh dengan 3 bara mengorbit \u2014 ikut paket skin Magma Vulkanik"],cost:0,reqTrophy:0,c1:"#ff8c42",c2:"#dc2626",exclusive:!0}],ai=new Map(Ie.map(n=>[n.id,n]));var oi={magma:{effect:"magma",trail:"magma"}},De=[{id:"classic",name:["Midnight","Tengah Malam"],cost:0,reqTrophy:0,bg:"linear-gradient(180deg, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.40) 40%, rgba(0,0,0,0.80) 100%)"},{id:"crimson",name:["Silent Crimson","Merah Sunyi"],cost:220,reqTrophy:150,bg:"linear-gradient(180deg, rgba(56,8,26,0.86) 0%, rgba(30,5,16,0.60) 45%, rgba(10,2,6,0.92) 100%)"},{id:"toxic",name:["Toxic Neon","Neon Toxik"],cost:220,reqTrophy:150,bg:"linear-gradient(180deg, rgba(8,40,24,0.86) 0%, rgba(5,22,15,0.60) 45%, rgba(2,10,7,0.92) 100%)"}];function ri(n){return Ae.find(e=>e.id===n.skin)??Ae[0]}function li(n){return De.find(e=>e.id===n.theme)??De[0]}var _s="neon-survivor:meta";function ci(){let n={cores:0,trophies:0,missionCleared:["volt"],levels:{},chars:["volt"],sel:"volt",partner:"",lastSupply:"",trails:[],trail:"none",skins:[],skin:"default",themes:[],theme:"classic",effects:[],effect:"none"};if(typeof window>"u")return n;try{let e=SafeStorage.getItem(_s);if(!e)return n;let t=JSON.parse(e),i=Array.isArray(t.chars)?t.chars.filter(k=>typeof k=="string"):[];i.includes("volt")||i.unshift("volt");let mc=Array.isArray(t.missionCleared)?t.missionCleared.filter(k=>typeof k=="string"):[...i];mc.includes("volt")||mc.unshift("volt");let trp=Math.max(0,Math.floor(Number(t.trophies)||0));let s=t.sel&&i.includes(t.sel)?t.sel:"volt",a=Ne.map(k=>k.id),l=Array.isArray(t.trails)?t.trails.filter(k=>typeof k=="string"&&a.includes(k)):[],o=t.trail&&a.includes(t.trail)&&(t.trail==="none"||l.includes(t.trail))?t.trail:"none",c=Ae.map(k=>k.id),d=Array.isArray(t.skins)?t.skins.filter(k=>typeof k=="string"&&c.includes(k)&&k!=="default"):[],r=t.skin&&c.includes(t.skin)&&(t.skin==="default"||d.includes(t.skin))?t.skin:"default",p=De.map(k=>k.id),m=Array.isArray(t.themes)?t.themes.filter(k=>typeof k=="string"&&p.includes(k)&&k!=="classic"):[],b=t.theme&&p.includes(t.theme)&&(t.theme==="classic"||m.includes(t.theme))?t.theme:"classic",g=Ie.map(k=>k.id),y=Array.isArray(t.effects)?t.effects.filter(k=>typeof k=="string"&&g.includes(k)&&k!=="none"):[],S=t.effect&&g.includes(t.effect)&&(t.effect==="none"||y.includes(t.effect))?t.effect:"none";let prt=typeof t.partner=="string"&&i.includes(t.partner)&&t.partner!==s?t.partner:"",lsup=typeof t.lastSupply=="string"?t.lastSupply:"";return{cores:Math.max(0,Math.floor(Number(t.cores)||0)),trophies:trp,missionCleared:Array.from(new Set(mc)),levels:t.levels??{},chars:Array.from(new Set(i)),sel:s,partner:prt,lastSupply:lsup,trails:Array.from(new Set(l)),trail:o,skins:Array.from(new Set(d)),skin:r,themes:Array.from(new Set(m)),theme:b,effects:Array.from(new Set(y)),effect:S}}catch{return n}}function J(n){try{SafeStorage.setItem(_s,JSON.stringify(n))}catch{}}function zs(n,e,t=0){let i=Math.floor(Math.min(n,5e3)/250)+Math.floor(Math.max(0,Math.min(n-5e3,25e3))/650)+Math.floor(Math.max(0,n-3e4)/1400)+e*4;return Math.max(1,Math.floor(i*(1+.08*t)))}var Re=[{id:0,label:["CALM","AMAN"],interval:1,group:1,hp:1,spd:1,dmg:1,elite:0,horde:1,score:1},{id:1,label:["ROUGH","GAWAT"],interval:.88,group:1.2,hp:1.25,spd:1.06,dmg:1.1,elite:.01,horde:1.3,score:1.5},{id:2,label:["DANGER","BAHAYA"],interval:.76,group:1.4,hp:1.55,spd:1.12,dmg:1.2,elite:.02,horde:1.6,score:2},{id:3,label:["DEADLY","MEMATIKAN"],interval:.64,group:1.6,hp:1.9,spd:1.18,dmg:1.3,elite:.035,horde:2,score:3}],Fe=["#22d3ee","#facc15","#fb923c","#ef4444"];function ce(n){let e=Math.round(Number(n));return!Number.isFinite(e)||e<=0?0:Math.min(3,e)}function gt(n,e){let t=Re[ce(e)];return t.id===0?n:{...n,interval:n.interval*t.interval,group:Math.max(1,Math.round(n.group*t.group)),hp:n.hp*t.hp,spd:n.spd*t.spd,dmg:n.dmg*t.dmg,elite:n.elite+t.elite,horde:n.horde>0?Math.max(1,Math.round(n.horde*t.horde)):n.horde}}function yt(n){return Re[ce(n)].score}function Ge(n,e){let t=yt(n);return Number.isInteger(t)?`\xD7${t}`:`\xD7${e?String(t).replace(".",","):String(t)}`}var T=Math.PI*2,R=(n,e,t)=>Math.min(t,Math.max(e,n)),it=(n,e,t)=>n+(e-n)*t,z=(n,e,t,i)=>{let s=n-t,a=e-i;return s*s+a*a},x=(n,e)=>n+Math.random()*(e-n),B=(n,e)=>n[R(e-1,0,n.length-1)];function Ke(n,e,t,i,s){let m=e||{},a=n.mods.hp+(m.vitality??0)*12;return{x:2600/2,y:2600/2,r:15,hp:a,preDownHp:a,reviveHp:Math.round(a*.5),facing:-Math.PI/2,iFrames:0,hurtFlash:0,moveMag:0,char:n,meta:m,shield:m.guardian??0,weapons:{[n.startWeapon]:1},passives:{},evolved:new Set,level:1,xp:0,pendingLevels:0,bit:0,depot:Vs(),boltCd:0,novaCd:0,chainCd:0,missileCd:0,frostTick:0,orbitAngle:0,prismaCd:0,singCd:0,isBot:t,downed:!1,downT:0,revive:0,eliminated:!1,aiOrbitDir:1,aiOrbitA:x(0,T),aiThinkT:x(1,2),aiPickDelay:1,inX:0,inY:0,lastInputAt:0,skinShape:i?.shape??"tri",skinColor:i?.color??"",effectId:s&&s!=="none"?s:""}}var Xs=[["PRIMORDIAL SHADOW","BAYANGAN PRIMORDIAL"],["NEON QUEEN","RATU NEON"],["CORROSION TITAN","TITAN KOROSI"],["ANNIHILATOR CALIBER","KALIBUR PEMUSNAH"],["SOLARIS MATRIX","MATRIKS SOLARIS"],["DELTA OMEGA","DELTA OMEGA"]],In=[0,25,50,75,100,130],Rn=[0,.1,.2,.3,.4,.55],Bn=[1,1.12,1.24,1.36,1.48,1.65],Hn=[1,1.3,1.6,1.9,2.25,2.7],$n=[1,.93,.86,.79,.72,.65],On=[1,1.12,1.24,1.36,1.48,1.65],Nn=[0,.6,1.2,1.8,2.4,3.5],q=[{name:["BORDERLAND","PERBATASAN"],sub:["collect crystals & level up","kumpulkan kristal & naik level"],interval:1.15,group:1,hp:1,spd:1,dmg:1,elite:0,horde:0,weights:{grunt:10}},{name:["DIGITAL RUINS","RERUNTUH DIGITAL"],sub:["small packs start swarming in","kawanan kecil mulai berdatangan"],interval:1,group:2,hp:1.1,spd:1,dmg:1.05,elite:0,horde:6,weights:{grunt:9,swarm:7}},{name:["CORROSION GATE","GERBANG KOROSI"],sub:["shooters guard the gate \u2014 dodge their fire!","penembak menjaga gerbang \u2014 hindari pelurunya!"],interval:.9,group:2,hp:1.2,spd:1.02,dmg:1.1,elite:0,horde:7,weights:{grunt:8,swarm:6,shooter:4}},{name:["ARMOR DIVISION","PASUKAN BAJA"],sub:["tanks arrive \u2014 thick & slow","tank muncul \u2014 tebal & lambat"],interval:.82,group:3,hp:1.35,spd:1.04,dmg:1.16,elite:.01,horde:8,weights:{grunt:7,swarm:6,shooter:4,tank:3}},{name:["DOUBLE PARTITION","PARTISI GANDA"],sub:["splitters appear \u2014 they split on death!","pemecah hadir \u2014 mereka belah saat mati!"],interval:.75,group:3,hp:1.5,spd:1.05,dmg:1.22,elite:.02,horde:10,weights:{grunt:6,swarm:6,shooter:4,tank:3,splitter:4}},{name:["OVERCLOCK CYCLE","SIKLUS OVERCLOCK"],sub:["everything moves faster","semua gerak lebih cepat"],interval:.68,group:4,hp:1.7,spd:1.12,dmg:1.3,elite:.03,horde:12,weights:{grunt:6,swarm:7,shooter:4,tank:3,splitter:4}},{name:["HUNTER PROTOCOL","PROTOKOL PEMBURU"],sub:["elites hunt you \u2014 big XP reward","para elite memburumu \u2014 hadiah XP besar"],interval:.6,group:4,hp:1.95,spd:1.14,dmg:1.38,elite:.05,horde:14,weights:{grunt:5,swarm:6,shooter:5,tank:4,splitter:4}},{name:["TITAN UPRISING","TITAN BERBANGKIT"],sub:["tanks & splitters flood the arena","tank & pemecah membanjir arena"],interval:.54,group:5,hp:2.2,spd:1.16,dmg:1.48,elite:.06,horde:16,weights:{grunt:4,swarm:6,shooter:5,tank:5,splitter:5}},{name:["VIRALITY","VIRALITAS"],sub:["neon viruses spread wild","virus neon menyebar liar"],interval:.47,group:5,hp:2.5,spd:1.2,dmg:1.58,elite:.07,horde:18,weights:{grunt:4,swarm:8,shooter:5,tank:4,splitter:5}},{name:["SYSTEM CORE","INTI SISTEM"],sub:["final phase \u2014 survive & win!","fase terakhir \u2014 bertahan & menang!"],interval:.4,group:6,hp:2.8,spd:1.24,dmg:1.7,elite:.08,horde:22,weights:{grunt:4,swarm:7,shooter:5,tank:5,splitter:5}}],ARENA_BG_KEY="neon-survivor:arenaBg",arenaBgMode="auto",ARENA_BGS=[
+scheduleLoginStep(e,t){if(!this.ctx||!this.musicBus)return;let i=Math.floor(e/16),s=e%16,a=U.CHORDS[Math.floor(i/2)%4],l=t-this.ctx.currentTime,o=a.minor?3:4;if(e%32===0){let c=a.root+12;this.pad([this.midi(c-12),this.midi(c),this.midi(c+o),this.midi(c+7)],U.MENU_STEP*30,l)}if(s%4===0){let subNote=a.root-12+(s===12?7:0);this.tone(this.midi(subNote),this.midi(subNote),U.MENU_STEP*3.4,"triangle",.13,l,this.musicBus)}if(s%2===0){let arpNotes=[0,o,7,12,12+o,12,7,o],idx=(s/2+i)%8,note=a.root+12+arpNotes[idx];this.tone(this.midi(note),this.midi(note),.36,"sine",.055,l,this.musicBus);if(s===0||s===8)this.tone(this.midi(note+12),this.midi(note+12),.45,"triangle",.028,l+U.MENU_STEP*.5,this.musicBus)}}pad(e,t,i){if(!this.ctx||!this.musicBus)return;let s=this.ctx.currentTime+i;for(let a of e)for(let l of[1,1.0045]){let o=this.ctx.createOscillator(),c=this.ctx.createBiquadFilter(),d=this.ctx.createGain();o.type="sawtooth",o.frequency.setValueAtTime(a*l,s),c.type="lowpass",c.frequency.setValueAtTime(520,s),c.frequency.linearRampToValueAtTime(1150,s+t*.45),c.frequency.linearRampToValueAtTime(420,s+t),d.gain.setValueAtTime(0,s),d.gain.linearRampToValueAtTime(.014,s+.9),d.gain.setValueAtTime(.014,s+t*.6),d.gain.linearRampToValueAtTime(0,s+t),o.connect(c),c.connect(d),d.connect(this.musicBus),o.start(s),o.stop(s+t+.1)}}scheduleMenuStep(e,t){if(!this.ctx||!this.musicBus)return;let i=Math.floor(e/16),s=e%16,a=U.CHORDS[Math.floor(i/2)%4],l=t-this.ctx.currentTime,o=a.minor?3:4;if(e%32===0){let c=a.root+12;this.pad([this.midi(c),this.midi(c+o),this.midi(c+7),this.midi(c+12)],U.MENU_STEP*30,l)}if(s===0&&this.tone(this.midi(a.root-12),this.midi(a.root-12),U.MENU_STEP*7,"sine",.15,l,this.musicBus),s===10&&this.tone(this.midi(a.root-5),this.midi(a.root-5),U.MENU_STEP*3,"sine",.08,l,this.musicBus),s===4||s===12){let c=(e>>2)%8,d=a.root+24+U.ARP[c];this.tone(this.midi(d),this.midi(d),.5,"triangle",.042,l,this.musicBus),this.tone(this.midi(d),this.midi(d),.42,"triangle",.019,l+U.MENU_STEP*1.5,this.musicBus)}if(s===8&&this.noiseBuf){let c=this.ctx.createBufferSource();c.buffer=this.noiseBuf,c.loop=!0;let d=this.ctx.createBiquadFilter();d.type="highpass",d.frequency.value=8e3;let r=this.ctx.createGain();r.gain.setValueAtTime(.016,t),r.gain.exponentialRampToValueAtTime(8e-4,t+.05),c.connect(d),d.connect(r),r.connect(this.musicBus),c.start(t),c.stop(t+.09)}}scheduleBattleStep(e,t){if(!this.ctx||!this.musicBus)return;let i=Math.floor(e/16),s=e%16,a=U.CHORDS[i],l=t-this.ctx.currentTime;if(s%4===0&&this.tone(150,42,.16,"sine",.3,l,this.musicBus),s%2===0){let o=s===14?12:0;this.tone(this.midi(a.root-12+o),this.midi(a.root-12+o),U.STEP*1.8,"triangle",.14,l,this.musicBus)}{let c=a.minor?15:16,d=U.ARP.map(b=>b===16?c:b),r=s%8,p=a.root+12+d[r],m=s%2===0?.05:.032;this.tone(this.midi(p),this.midi(p),U.STEP*.9,"square",m,l,this.musicBus)}if(s%4===2&&this.noiseBuf){let o=this.ctx.createBufferSource();o.buffer=this.noiseBuf,o.loop=!0;let c=this.ctx.createBiquadFilter();c.type="highpass",c.frequency.value=7e3;let d=this.ctx.createGain();d.gain.setValueAtTime(.05,t),d.gain.exponentialRampToValueAtTime(8e-4,t+.04),o.connect(c),c.connect(d),d.connect(this.musicBus),o.start(t),o.stop(t+.08)}}destroy(){this.stopMusic(),this.ctx&&(this.ctx.close().catch(()=>{}),this.ctx=null)}};U.TEMPO=118,U.STEP=60/U.TEMPO/4,U.MENU_TEMPO=76,U.MENU_STEP=60/U.MENU_TEMPO/4,U.CHORDS=[{root:45,minor:!0},{root:41,minor:!1},{root:48,minor:!1},{root:43,minor:!1}],U.ARP=[0,7,12,16,12,7,0,7];var ft=U;var ae=[{id:"volt",name:"VOLT",title:["Standard Technician","Teknisi Standar"],icon:"\u2726",color:"#22d3ee",startWeapon:"bolt",desc:["Balanced & reliable. Slightly higher damage \u2014 fits any play style.","Seimbang & andal. Damage sedikit lebih tinggi \u2014 cocok untuk semua gaya bermain."],mods:{hp:100,speed:1,damage:1.1,xp:1,magnet:1,regen:0}},{id:"nyx",name:"NYX",title:["Crossing Shadow","Bayangan Lintas"],icon:"\u2727",color:"#f472b6",startWeapon:"orbit",desc:["Fast & slippery with a wide magnet, but fragile.","Cepat & licin dengan magnet luas, tapi hidupnya tipis."],mods:{hp:85,speed:1.12,damage:1,xp:1,magnet:1.45,regen:0},unlock:{hint:["Reach player level 5 in one run","Capai level pemain 5 dalam satu permainan"],check:n=>n.level>=5}},{id:"titan",name:"TITAN",title:["Corrosion Fortress","Benteng Korosi"],icon:"\u2B23",color:"#fb923c",startWeapon:"nova",desc:["Extremely tough & regenerating, but slow.","Sangat kokoh & beregenerasi, tapi geraknya lambat."],mods:{hp:150,speed:.86,damage:1,xp:1,magnet:1,regen:1},unlock:{hint:["Defeat 1 boss","Kalahkan 1 boss"],check:n=>n.bosses>=1}},{id:"wisp",name:"WISP",title:["Light Signal","Sinyal Cahaya"],icon:"\u2756",color:"#a3e635",startWeapon:"frost",desc:["Fastest in the arena & rich in XP \u2014 nearly glass-thin.","Tercepat di arena & kaya XP \u2014 nyaris rapuh seperti kaca."],mods:{hp:75,speed:1.22,damage:1,xp:1.3,magnet:1.1,regen:0},unlock:{hint:["Survive 5 minutes in one run","Bertahan 5 menit dalam satu permainan"],check:n=>n.time>=300}},{id:"strix",name:"STRIX",title:["Storm Weaver","Penenun Badai"],icon:"\u26A1",color:"#facc15",startWeapon:"chain",desc:["Chain lightning leaps between enemies \u2014 a crowd-cleaning machine.","Rantai petir melompat antar musuh \u2014 mesin pembersih gerombolan."],mods:{hp:90,speed:1.05,damage:.95,xp:1,magnet:1,regen:0},unlock:{hint:["Defeat 3 bosses in one run","Kalahkan 3 boss dalam satu permainan"],check:n=>n.bosses>=3}},{id:"dart",name:"DART",title:["Locking Arrow","Panah Pengunci"],icon:"\u27A4",color:"#f87171",startWeapon:"missile",desc:["Hunter missiles that always find their target \u2014 calm, steady, dependable.","Misil pemburu yang selalu menemukan sasarannya \u2014 tenang, stabil, tepercaya."],mods:{hp:95,speed:1.02,damage:1,xp:1,magnet:1.05,regen:0},unlock:{hint:["Reach phase 5 (Time Attack) or mission 5 (Mission/Duet)","Capai fase 5 (Time Attack) atau misi 5 (Mission/Duet)"],check:n=>n.phase>=5}},{id:"lux",name:"LUX",title:["Piercing Beam","Sinar Menembus"],icon:"\u25B2",color:"#f0abfc",startWeapon:"prisma",desc:["Prism beams pierce enemy lines at once \u2014 precision amid the chaos.","Sinar prisma menembus barisan musuh sekaligus \u2014 presisi di tengah keramaian."],mods:{hp:80,speed:1.08,damage:1,xp:1.15,magnet:1,regen:0},unlock:{hint:["Reach player level 12 in one run","Capai level pemain 12 dalam satu permainan"],check:n=>n.level>=12}},{id:"void",name:"VOID",title:["The Gravity","Sang Gravitasi"],icon:"\u2B24",color:"#818cf8",startWeapon:"singularity",desc:["Tears space open \u2014 pulls and crushes crowds into one point.","Melubangi ruang \u2014 menarik dan menghimpit gerombolan ke satu titik."],mods:{hp:90,speed:.95,damage:1.05,xp:1,magnet:1.2,regen:0},unlock:{hint:["Score 20,000 points in one run","Raih 20.000 poin dalam satu permainan"],check:n=>n.score>=2e4}}],Qe={volt:"lux",lux:"volt",nyx:"wisp",wisp:"nyx",titan:"strix",strix:"titan",dart:"void",void:"dart"};function ee(n){return ae.find(e=>e.id===n)??ae[0]}var Fs="neon-survivor:lang-v2",fe="en",Ns=!1,Gs=new Set;function Ws(){if(!(Ns||typeof window>"u")){Ns=!0;try{let n=SafeStorage.getItem(Fs);if((n==="en"||n==="id")&&n!==fe){fe=n;for(let e of Gs)e(n)}}catch{}}}function Ee(){return fe}function Sn(n){if(n!==fe){fe=n;try{SafeStorage.setItem(Fs,n)}catch{}for(let e of Gs)e(n)}}function Us(){Sn(fe==="en"?"id":"en")}function h(n,e){return fe==="en"?n:e}function v(n){return typeof n=="string"?n:fe==="en"?n[0]:n[1]}function F(n){return n.toLocaleString(fe==="en"?"en-US":"id-ID")}var Mn=6,Tn=6,oe=5,Y={bolt:{id:"bolt",name:["Bolt Plasma","Bolt Plasma"],icon:"\u2726",color:"#22d3ee",tagline:["Fires at the nearest enemy automatically.","Menembak musuh terdekat secara otomatis."],levelDesc:[["Fires 1 projectile at the nearest enemy.","Tembak 1 proyektil ke musuh terdekat."],["+1 projectile per shot.","+1 proyektil per tembakan."],["More damage & faster cooldown.","Damage naik & cooldown lebih cepat."],["+1 projectile per shot.","+1 proyektil per tembakan."],["4 projectiles, big damage, pierces 1 enemy.","4 proyektil, damage besar, menembus 1 musuh."]]},orbit:{id:"orbit",name:["Orbit Blades","Bilah Orbit"],icon:"\u2727",color:"#f472b6",tagline:["Energy blades orbiting and shielding you.","Bilah energi yang berputar melindungimu."],levelDesc:[["2 blades spin around you.","2 bilah berputar mengitari dirimu."],["+1 blade.","+1 bilah."],["More damage & faster rotation.","Damage & kecepatan rotasi naik."],["+1 blade.","+1 bilah."],["6 large blades with maximum damage.","6 bilah besar dengan damage maksimal."]]},nova:{id:"nova",name:["Nova Wave","Nova Gelombang"],icon:"\u25CE",color:"#a3e635",tagline:["A shockwave that slams every direction.","Gelombang kejut yang menghantam semua arah."],levelDesc:[["A shock pulse expands from you.","Pulsa kejut meluas dari dirimu."],["Bigger radius & damage.","Radius & damage naik."],["Shorter cooldown.","Cooldown lebih singkat."],["Bigger radius & damage again.","Radius & damage naik lagi."],["A giant blast at close range.","Ledakan raksasa berkerapatan pendek."]]},chain:{id:"chain",name:["Chain Thunder","Guntur Berantai"],icon:"\u26A1",color:"#facc15",tagline:["Lightning that leaps between enemies.","Petir yang melompat antar musuh."],levelDesc:[["Strikes the nearest enemy.","Menyambar musuh terdekat."],["Leaps to 3 enemies.","Melompat ke 3 musuh."],["More damage.","Damage naik."],["Leaps to 5 enemies.","Melompat ke 5 musuh."],["7 leaps with devastating damage.","7 lompatan dengan damage dahsyat."]]},missile:{id:"missile",name:["Hunter Missile","Misil Pemburu"],icon:"\u27A4",color:"#fb923c",tagline:["Homing rockets with area explosions.","Roket penjejak dengan ledakan area."],levelDesc:[["Fires 1 homing missile.","Menembak 1 misil penjejak."],["+1 missile.","+1 misil."],["Bigger explosion.","Ledakan lebih besar."],["+1 missile & more damage.","+1 misil & damage naik."],["3 missiles with massive blasts.","3 misil berledak hebat."]]},frost:{id:"frost",name:["Frost Aura","Aura Beku"],icon:"\u2744",color:"#7dd3fc",tagline:["A cold aura that slows & hurts.","Aura dingin yang memperlambat & melukai."],levelDesc:[["Slows enemies near you.","Memperlambat musuh di dekatmu."],["Bigger radius & more damage per second.","Radius & damage per detik naik."],["Enemies move slower inside the aura.","Musuh lebih lambat di dalam aura."],["Bigger radius & damage again.","Radius & damage naik lagi."],["A vast frozen area with sharp damage.","Daerah beku luas dengan damage tajam."]]},prisma:{id:"prisma",name:["Prism Beam","Prisma Sinar"],icon:"\u25B2",color:"#e879f9",tagline:["Laser beams that pierce every enemy in a straight line.","Sinar laser yang menembus semua musuh dalam garis lurus."],levelDesc:[["Fires a beam at the nearest enemy, piercing everything on its path.","Menembakkan sinar ke musuh terdekat, menembus semua di jalurnya."],["More damage & longer beam.","Damage & panjang sinar naik."],["A second beam fires the opposite way.","Sinar kedua menyambar ke arah sebaliknya."],["More damage & wider beam.","Damage & lebar sinar naik."],["3 beams crossing in every direction.","3 sinar menyilang ke segala arah."]]},singularity:{id:"singularity",name:["Singularity","Singularitas"],icon:"\u2B24",color:"#a78bfa",tagline:["A black hole pulling & crushing enemy crowds.","Lubang hitam yang menarik & meremas gerombolan musuh."],levelDesc:[["The black hole pulls enemies & crushes them at its core.","Lubang hitam menarik musuh & meremasnya di intinya."],["Stronger pull & more damage.","Tarikan lebih kuat & damage naik."],["Longer duration, wider pull radius.","Durasi lebih lama, radius tarik melebar."],["Core damage rises sharply.","Damage inti naik tajam."],["Explodes violently when the hole collapses.","Meledak dahsyat saat lubangnya runtuh."]]}},Ce={speed:{id:"speed",name:["Wind Shoes","Sepatu Angin"],icon:"\xBB",color:"#4ade80",tagline:[" Move faster."," Bergerak lebih cepat."],levelDesc:[["Move speed +10%.","Kecepatan gerak +10%."],["Move speed +20%.","Kecepatan gerak +20%."],["Move speed +30%.","Kecepatan gerak +30%."],["Move speed +40%.","Kecepatan gerak +40%."],["Move speed +55%.","Kecepatan gerak +55%."]]},maxhp:{id:"maxhp",name:["Iron Heart","Jantung Baja"],icon:"\u2665",color:"#f87171",tagline:["More HP, instantly healed.","Darah lebih banyak, langsung dipulihkan."],levelDesc:[["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +25 & heal 25 HP.","HP maks +25 & pulih 25 HP."],["Max HP +30 & heal 30 HP.","HP maks +30 & pulih 30 HP."]]},damage:{id:"damage",name:["Eagle Eye","Mata Elang"],icon:"\u2716",color:"#fb7185",tagline:["All weapons hurt more.","Semua senjata lebih sakit."],levelDesc:[["All weapon damage +12%.","Damage semua senjata +12%."],["All weapon damage +24%.","Damage semua senjata +24%."],["All weapon damage +36%.","Damage semua senjata +36%."],["All weapon damage +48%.","Damage semua senjata +48%."],["All weapon damage +65%.","Damage semua senjata +65%."]]},magnet:{id:"magnet",name:["Magnet Amulet","Amulet Magnet"],icon:"\u2299",color:"#c084fc",tagline:["Pulls XP crystals from farther away.","Menarik kristal XP dari lebih jauh."],levelDesc:[["Pickup radius +30%.","Radius tarik +30%."],["Pickup radius +60%.","Radius tarik +60%."],["Pickup radius +90%.","Radius tarik +90%."],["Pickup radius +125%.","Radius tarik +125%."],["Pickup radius +170%.","Radius tarik +170%."]]},haste:{id:"haste",name:["Hourglass","Jam Pasir"],icon:"\u25CC",color:"#fde047",tagline:["Faster weapon cooldowns.","Cooldown senjata lebih cepat."],levelDesc:[["Cooldown -7%.","Cooldown -7%."],["Cooldown -14%.","Cooldown -14%."],["Cooldown -21%.","Cooldown -21%."],["Cooldown -28%.","Cooldown -28%."],["Cooldown -35%.","Cooldown -35%."]]},xpgain:{id:"xpgain",name:["XP Catalyst","Kristal Ilmu"],icon:"\u25C6",color:"#34d399",tagline:["Gain more XP.","XP yang didapat bertambah."],levelDesc:[["XP +12%.","XP +12%."],["XP +24%.","XP +24%."],["XP +36%.","XP +36%."],["XP +48%.","XP +48%."],["XP +65%.","XP +65%."]]},regen:{id:"regen",name:["Regeneration","Regenerasi"],icon:"\u271A",color:"#f9a8d4",tagline:["Slowly heal HP every second.","Pulihkan HP perlahan setiap detik."],levelDesc:[["Heal 0.6 HP/s.","Pulih 0.6 HP/detik."],["Heal 1.2 HP/s.","Pulih 1.2 HP/detik."],["Heal 1.8 HP/s.","Pulih 1.8 HP/detik."],["Heal 2.4 HP/s.","Pulih 2.4 HP/detik."],["Heal 3.5 HP/s.","Pulih 3.5 HP/detik."]]}},ke=[{weapon:"bolt",passive:"damage",name:["Tempest Reactor","Tempest Reaktor"],icon:"\u2739",color:"#67e8f9",tagline:["High-speed twin shots that pierce 3 enemies.","Tembakan kembar berkecepatan tinggi yang menembus 3 musuh."]},{weapon:"orbit",passive:"speed",name:["Shadow Scythe","Sabit Bayangan"],icon:"\u263E",color:"#f0abfc",tagline:["2 counter-rotating orbit blade layers with a wider radius.","2 lapis bilah orbit berlawanan arah dengan radius lebih luas."]},{weapon:"nova",passive:"maxhp",name:["Core Supernova","Supernova Inti"],icon:"\u273A",color:"#bef264",tagline:["A giant blast that leaves a burning fire ring.","Ledakan raksasa yang meninggalkan cincin api membakar."]},{weapon:"frost",passive:"magnet",name:["Absolute Zero","Nol Absolut"],icon:"\u2746",color:"#bae6fd",tagline:["Enemies touched by the aura freeze for a moment.","Musuh yang tersentuh aura membeku sesaat."]},{weapon:"chain",passive:"haste",name:["Sky Chain","Rantai Langit"],icon:"\u26A1",color:"#fde047",tagline:["+2 leaps with longer reach, lightning can crit.","Lompatan +2 ke jangkauan lebih jauh, petir bisa mengkritikal."]},{weapon:"missile",passive:"xpgain",name:["Missile Belt","Sabuk Misil"],icon:"\u2738",color:"#f87171",tagline:["6 missiles per shot with a wider explosion.","6 misil tiap tembakan dengan ledakan yang lebih lebar."]},{weapon:"prisma",passive:"damage",name:["Spectrum Spear","Tombak Spektrum"],icon:"\u25C8",color:"#fdf4ff",tagline:["4 crossing spectrum beams, total pierce, faster.","4 sinar spektrum menyilang, menembus total lebih cepat."]},{weapon:"singularity",passive:"regen",name:["Black Hole","Lubang Hitam"],icon:"\u25C9",color:"#c4b5fd",tagline:["Stronger suction & crushes enemies at its center.","Hisap lebih kuat & meremas musuh di pusatnya."]}];function Qt(n){return ke.find(e=>e.weapon===n)}var wn={id:"heal",kind:"filler",name:"Kit Medis",icon:"\u271A",color:"#f87171",level:0,isNew:!1,description:"Pulihkan 50 HP sekarang juga."};function En(){return{...wn,name:v(["Med Kit","Kit Medis"]),description:v(["Restore 50 HP right now.","Pulihkan 50 HP sekarang juga."])}}function Oe(n){let e=[],t=Object.keys(Y),i=t.filter(r=>(n.weapons[r]??0)>0).length;for(let r of t){let p=n.weapons[r]??0;if(p>=oe||p===0&&i>=Mn)continue;let m=Y[r];e.push({id:r,kind:"weapon",name:v(m.name),icon:m.icon,color:m.color,level:p+1,isNew:p===0,description:v(m.levelDesc[p]??m.tagline)})}let s=Object.keys(Ce),a=s.filter(r=>(n.passives[r]??0)>0).length;for(let r of s){let p=n.passives[r]??0;if(p>=oe||p===0&&a>=Tn)continue;let m=Ce[r];e.push({id:r,kind:"passive",name:v(m.name),icon:m.icon,color:m.color,level:p+1,isNew:p===0,description:v(m.levelDesc[p]??m.tagline)})}let l=r=>ke.some(p=>p.passive===r&&(n.weapons[p.weapon]??0)>=oe&&(n.passives[r]??0)<oe),o=r=>{let p=Qt(r);return!!p&&(n.passives[p.passive]??0)>=oe&&(n.weapons[r]??0)<oe},c=[];for(let r of e){let p=r.kind==="weapon"?(n.weapons[r.id]??0)>0:(n.passives[r.id]??0)>0,b=(r.kind==="weapon"?o(r.id):l(r.id))?5:p?2:1;for(let g=0;g<b;g++)c.push(r)}let d=[];for(;d.length<3&&c.length>0;){let r=Math.floor(Math.random()*c.length),p=c[r];d.some(m=>m.id===p.id)||d.push(p);for(let m=c.length-1;m>=0;m--)c[m].id===p.id&&c.splice(m,1)}for(;d.length<3;)d.push(En());return d}var Cn={dmg:0,cd:0,speed:0,maxhp:0,maxhpMul:1,range:0,xp:0,magnet:0,bit:0,regen:0,regenMul:1},Ze=[{id:"power",name:["Power Cell","Power Cell"],icon:"\u{1F50B}",color:"#fb7185",desc:["All weapon damage +6%","Damage semua senjata +6%"],maxStack:6,baseCost:24,mods:{dmg:.06}},{id:"coolant",name:["Coolant","Coolant"],icon:"\u2744",color:"#7dd3fc",desc:["Weapon cooldown \u22124%","Cooldown senjata \u22124%"],maxStack:6,baseCost:26,mods:{cd:.04}},{id:"thruster",name:["Thruster","Thruster"],icon:"\xBB",color:"#4ade80",desc:["Move speed +4%","Kecepatan gerak +4%"],maxStack:5,baseCost:22,mods:{speed:.04}},{id:"plating",name:["Plating","Plating"],icon:"\u25A3",color:"#f87171",desc:["Max HP +15 & heal 15","HP Maks +15 & pulih 15"],maxStack:5,baseCost:28,mods:{maxhp:15}},{id:"scope",name:["Scope","Scope"],icon:"\u{1F52D}",color:"#22d3ee",desc:["Weapon range +8%","Jangkauan senjata +8%"],maxStack:5,baseCost:25,mods:{range:.08}},{id:"lens",name:["Lens","Lens"],icon:"\u25C6",color:"#34d399",desc:["XP gain +10%","Perolehan XP +10%"],maxStack:5,baseCost:24,mods:{xp:.1}},{id:"coil",name:["Magnet Coil","Lilin Magnet"],icon:"\u2299",color:"#c084fc",desc:["Pickup radius +15%","Radius pungut +15%"],maxStack:4,baseCost:20,mods:{magnet:.15}},{id:"nano",name:["Nano Repair","Nano Perbaikan"],icon:"\u271A",color:"#f9a8d4",desc:["Regen +0.4 HP/s","Regen +0,4 HP/dtk"],maxStack:4,baseCost:26,mods:{regen:.4}},{id:"antenna",name:["Bit Antenna","Antena Bit"],icon:"\u25C7",color:"#fbbf24",desc:["BIT from crystals +12%","BIT dari kristal +12%"],maxStack:4,baseCost:22,mods:{bit:.12}}],Le=new Map(Ze.map(n=>[n.id,n])),bt=[{id:"repair",name:["Repair Kit","Kit Perbaikan"],icon:"\u271A",color:"#4ade80",desc:["Restore 50% HP now","Pulihkan 50% HP sekarang"],baseCost:25,inflate:!0},{id:"freeze",name:["Freeze Start","Mulai Beku"],icon:"\u2744",color:"#7dd3fc",desc:["Next phase: enemies frozen 3s","Fase berikutnya: musuh beku 3 dtk"],baseCost:30,inflate:!0},{id:"scorechip",name:["Score Chip","Chip Skor"],icon:"\u27162",color:"#fbbf24",desc:["Final score +3% (max 3)","Skor akhir +3% (maks 3)"],baseCost:80,inflate:!0},{id:"secondlife",name:["Second Life","Nyawa Kedua"],icon:"\u2665",color:"#f87171",desc:["+1 revive this run (solo modes)","+1 kebangkitan ronde ini (mode solo)"],baseCost:200,inflate:!1}],re=new Map(bt.map(n=>[n.id,n])),et=[{id:"sightlock",name:["SIGHTLOCK","SIGHTLOCK"],icon:"\u{1F3AF}",color:"#fb7185",bonus:["Damage +30%","Damage +30%"],minus:["Range \u221215%","Jangkauan \u221215%"],tier:1,baseCost:70,mods:{dmg:.3,range:-.15}},{id:"greedchip",name:["GREED CHIP","GREED CHIP"],icon:"\u25C7",color:"#fbbf24",bonus:["BIT from crystals +50%","BIT dari kristal +50%"],minus:["Damage \u221210%","Damage \u221210%"],tier:1,baseCost:70,mods:{bit:.5,dmg:-.1}},{id:"hairtrigger",name:["HAIR TRIGGER","HAIR TRIGGER"],icon:"\u25CC",color:"#fde047",bonus:["Cooldown \u221218%","Cooldown \u221218%"],minus:["Regen \u221250%","Regen \u221250%"],tier:2,baseCost:80,mods:{cd:.18,regenMul:.5}},{id:"longbarrel",name:["LONG BARREL","LONG BARREL"],icon:"\u{1F52D}",color:"#22d3ee",bonus:["Range +35%","Jangkauan +35%"],minus:["Move speed \u22126%","Kecepatan gerak \u22126%"],tier:3,baseCost:80,mods:{range:.35,speed:-.06}},{id:"focuslens",name:["FOCUS LENS","FOCUS LENS"],icon:"\u25C6",color:"#34d399",bonus:["XP +40%","XP +40%"],minus:["Pickup radius \u221225%","Radius pungut \u221225%"],tier:3,baseCost:85,mods:{xp:.4,magnet:-.25}},{id:"glasscore",name:["GLASS CORE","GLASS CORE"],icon:"\u{1F4A0}",color:"#e879f9",bonus:["Damage +45%","Damage +45%"],minus:["Max HP \u221212%","HP Maks \u221212%"],tier:4,baseCost:100,mods:{dmg:.45,maxhpMul:.88}},{id:"prismshard",name:["PRISM SHARD","PRISM SHARD"],icon:"\u25C8",color:"#e879f9",bonus:["Range +20% & cooldown \u221210%","Jangkauan +20% & cooldown \u221210%"],minus:["BIT from crystals \u221230%","BIT dari kristal \u221230%"],tier:5,baseCost:110,mods:{range:.2,cd:.1,bit:-.3}}],Pe=new Map(et.map(n=>[n.id,n]));function Vs(){return{chips:{},overclocks:[],secondLife:0,scoreChips:0}}function le(n){let e={...Cn};for(let[t,i]of Object.entries(n.chips)){if(!i)continue;let s=Le.get(t);if(s)for(let a=0;a<i;a++)Ks(e,s.mods)}for(let t of n.overclocks){let i=Pe.get(t);i&&Ks(e,i.mods)}return e.cd=Math.min(.7,e.cd),e.dmg=Math.max(-.6,e.dmg),e.range=Math.max(-.6,e.range),e.speed=Math.max(-.4,e.speed),e.magnet=Math.max(-.75,e.magnet),e.bit=Math.max(-.75,e.bit),e.regenMul=Math.max(0,e.regenMul),e.maxhpMul=Math.max(.3,e.maxhpMul),e}function Ks(n,e){e.dmg&&(n.dmg+=e.dmg),e.cd&&(n.cd+=e.cd),e.speed&&(n.speed+=e.speed),e.maxhp&&(n.maxhp+=e.maxhp),e.maxhpMul&&(n.maxhpMul*=e.maxhpMul),e.range&&(n.range+=e.range),e.xp&&(n.xp+=e.xp),e.magnet&&(n.magnet+=e.magnet),e.bit&&(n.bit+=e.bit),e.regen&&(n.regen+=e.regen),e.regenMul&&(n.regenMul*=e.regenMul)}function Zt(n){return 1+.45*Math.max(0,n-1)}function ei(n,e,t){return Math.ceil(n.baseCost*Math.pow(1.35,e)*Zt(t))}function ti(n,e){return Math.ceil(n.baseCost*(n.inflate?Zt(e):1))}function ii(n,e){return Math.ceil(n.baseCost*Zt(e))}function si(n){return 10+5*n}var Ln=10;function ni(n){let e=n.rng??Math.random,t=[],i=1+(e()<.5?1:0),s=1+(e()<.4?1:0),a=Ln-i-s,l=Ze.filter(m=>(n.build.chips[m.id]??0)<m.maxStack),o=[];for(let m=0;m<a&&l.length>0;m++){let b=Math.floor(e()*l.length),g=l.splice(b,1)[0];g&&o.push(g)}for(let m of o)t.push({slot:t.length,kind:"chip",id:m.id,cost:ei(m,n.build.chips[m.id]??0,n.visit),sold:!1});let c=[re.get("repair")];n.allowSecondLife&&n.build.secondLife===0&&c.push(re.get("secondlife")),n.build.scoreChips<3&&c.push(re.get("scorechip")),c.push(re.get("freeze"));let d=[];for(let m=0;m<s&&c.length>0;m++){let b=Math.floor(e()*c.length),g=c.splice(b,1)[0];g&&d.push(g)}for(let m of d)t.push({slot:t.length,kind:"service",id:m.id,cost:ti(m,n.visit),sold:!1});let r=et.filter(m=>m.tier<=n.phase&&!n.build.overclocks.includes(m.id)),p=[];for(let m=0;m<i&&r.length>0;m++){let b=Math.floor(e()*r.length),g=r.splice(b,1)[0];g&&p.push(g)}for(let m of p)t.push({slot:t.length,kind:"overclock",id:m.id,cost:ii(m,n.visit),sold:!1});for(let m=t.length-1;m>0;m--){let b=Math.floor(e()*(m+1)),g=t[m];t[m]=t[b],t[b]=g}return t.forEach((m,b)=>{m.slot=b}),t}var Pn={bolt:["power","coolant","scope"],prisma:["power","coolant","scope"],chain:["coolant","power","scope"],missile:["power","scope","coolant"],orbit:["power","plating","thruster"],nova:["plating","power","coolant"],frost:["power","coil","plating"],singularity:["power","coil","plating"]},An=["orbit","nova","frost","singularity"];function Dn(n,e,t){switch(e){case"sightlock":return An.includes(n);case"greedchip":return!0;case"hairtrigger":return(t.chips.nano??0)===0;case"longbarrel":return!0;case"focuslens":return(t.chips.coil??0)<2;case"glasscore":return(t.chips.plating??0)>=1;case"prismshard":return(t.chips.antenna??0)===0;default:return!1}}function js(n){let e=n.rng??Math.random,t=[],i=n.wallet,s=n.items.filter(o=>!o.sold),a=o=>{t.push({slot:o.slot,id:o.id,cost:o.cost}),i-=o.cost,o.sold=!0};if(n.hpFrac<.4){let o=s.find(c=>c.kind==="service"&&c.id==="repair"&&c.cost<=i);o&&a(o)}let l=Pn[n.weapon]??["power"];for(let o of l){if(i<=0)break;let c=s.find(d=>!d.sold&&d.kind==="chip"&&d.id===o&&d.cost<=i);c&&e()<.8&&a(c)}for(let o of s)o.sold||o.kind!=="overclock"||o.cost>i||Dn(n.weapon,o.id,n.build)&&i-o.cost>=30&&a(o);if(i>0&&i<60){let o=s.find(c=>!c.sold&&c.kind==="chip"&&c.cost<=i);o&&a(o)}return t}var qs=[{id:"vitality",name:["Vitality","Vitalitas"],icon:"\u2665",color:"#f87171",max:5,cost:[20,50,120,250,450],reqTrophy:[0,0,0,200,500],desc:n=>v([`Starting HP +${n*12}`,`HP awal +${n*12}`])},{id:"power",name:["Firepower","Daya Rusak"],icon:"\u2716",color:"#fb7185",max:5,cost:[25,60,140,280,500],reqTrophy:[0,0,0,200,500],desc:n=>v([`All weapon damage +${n*5}%`,`Damage semua senjata +${n*5}%`])},{id:"swiftness",name:["Swiftness","Kecepatan"],icon:"\xBB",color:"#4ade80",max:5,cost:[20,50,120,250,450],reqTrophy:[0,0,0,200,500],desc:n=>v([`Move speed +${n*3}%`,`Kecepatan gerak +${n*3}%`])},{id:"magnetism",name:["Magnetism","Magnetisme"],icon:"\u2299",color:"#c084fc",max:5,cost:[18,45,100,220,400],reqTrophy:[0,0,0,200,500],desc:n=>v([`Magnet radius +${n*15}%`,`Radius magnet +${n*15}%`])},{id:"greed",name:["XP Catalyst","Katalis XP"],icon:"\u25C6",color:"#34d399",max:5,cost:[20,50,120,250,450],reqTrophy:[0,0,0,200,500],desc:n=>v([`XP gain +${n*8}%`,`Perolehan XP +${n*8}%`])},{id:"guardian",name:["Emergency Shield","Perisai Darurat"],icon:"\u2B21",color:"#22d3ee",max:2,cost:[120,320],reqTrophy:[100,400],desc:n=>n>0?v([`Start with ${n} shields (each blocks 1 hit)`,`Mulai dengan ${n} perisai (menahan 1 pukulan)`]):v(["Start with 1 shield (blocks 1 hit)","Mulai dengan 1 perisai (menahan 1 pukulan)"])},{id:"revive",name:["Second Wind","Napas Kedua"],icon:"\u271A",color:"#4ade80",max:1,cost:[450],reqTrophy:[350],desc:()=>v(["Once per run: cheat death with 50% HP (solo modes \u2014 never against the red line)","Sekali per ronde: selamat dari maut dengan 50% HP (mode solo \u2014 tak berlaku di garis merah)"])},{id:"tuner",name:["Core Tuner","Tuner Inti"],icon:"\u2B21",color:"#e879f9",max:5,cost:[35,80,170,320,550],reqTrophy:[0,0,0,200,500],desc:n=>v([`Neon Cores from runs +${n*8}%`,`Inti Neon dari ronde +${n*8}%`])}],Ne=[{id:"none",name:["Default","Bawaan"],color:"",cost:0,reqTrophy:0},{id:"gold",name:["Gold Rush","Serbuan Emas"],color:"#fbbf24",cost:200,reqTrophy:100},{id:"magenta",name:["Hot Magenta","Magenta Panas"],color:"#f472b6",cost:200,reqTrophy:100},{id:"lime",name:["Toxic Lime","Lime Toksik"],color:"#a3e635",cost:200,reqTrophy:100},{id:"white",name:["White Heat","Panas Putih"],color:"#e0fbff",cost:350,reqTrophy:300},{id:"magma",name:["Magma Flow","Arus Magma"],color:"#ff5a1f",cost:0,reqTrophy:0,exclusive:!0}],Ae=[{id:"default",name:["Factory","Bawaan"],shape:"tri",color:"",cost:0,reqTrophy:0},{id:"sakura",name:["Sakura","Sakura"],shape:"tri",color:"#f9a8d4",cost:180,reqTrophy:0},{id:"toxic",name:["Toxic","Toksik"],shape:"tri",color:"#a3e635",cost:180,reqTrophy:0},{id:"frost",name:["Frost","Beku"],shape:"tri",color:"#7dd3fc",cost:180,reqTrophy:50},{id:"ember",name:["Ember","Bara"],shape:"tri",color:"#fb923c",cost:180,reqTrophy:50},{id:"gold",name:["Gold","Emas"],shape:"tri",color:"#fbbf24",cost:320,reqTrophy:150},{id:"chrome",name:["Chrome","Krom"],shape:"tri",color:"#e2e8f0",cost:320,reqTrophy:150},{id:"arrow",name:["Arrow Frame","Rangka Panah"],shape:"arrow",color:"",cost:520,reqTrophy:400},{id:"diamond",name:["Diamond Frame","Rangka Berlian"],shape:"diamond",color:"",cost:520,reqTrophy:400},{id:"magma",name:["Volcanic Magma","Magma Vulkanik"],shape:"magma",color:"#ff6d3a",cost:1800,reqTrophy:1000,tier:"epic"}],Ie=[{id:"none",name:["No Effect","Tanpa Efek"],desc:["Plain ship \u2014 no glow","Kapal polos \u2014 tanpa cahaya"],cost:0,reqTrophy:0,c1:"",c2:""},{id:"aurora",name:["Aurora","Aurora"],desc:["Two green-cyan light arcs orbiting the ship + comet trail while moving","Dua busur cahaya hijau-sian mengorbit kapal + jejak komet saat bergerak"],cost:480,reqTrophy:350,c1:"#34d399",c2:"#22d3ee"},{id:"supernova",name:["Supernova","Supernova"],desc:["Flickering solar flare aura with 4 light rays + ember sparks while moving","Aura suar matahari berkelap-kelip 4 sinar + percikan bara saat bergerak"],cost:750,reqTrophy:650,c1:"#fb923c",c2:"#ef4444"},{id:"void",name:["Void Ring","Cincin Void"],desc:["Twin counter-rotating violet rings + gravity star trail while moving","Cincin ungu kembar berlawanan putaran + jejak bintang gravitasi saat bergerak"],cost:1100,reqTrophy:950,c1:"#a78bfa",c2:"#7c3aed"},{id:"magma",name:["Magma Core","Inti Magma"],desc:["Molten lava halo with 3 orbiting embers \u2014 bundled with Volcanic Magma skin","Halo lava meleleh dengan 3 bara mengorbit \u2014 ikut paket skin Magma Vulkanik"],cost:0,reqTrophy:0,c1:"#ff8c42",c2:"#dc2626",exclusive:!0}],ai=new Map(Ie.map(n=>[n.id,n]));var oi={magma:{effect:"magma",trail:"magma"}},De=[{id:"classic",name:["Midnight","Tengah Malam"],cost:0,reqTrophy:0,bg:"linear-gradient(180deg, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.40) 40%, rgba(0,0,0,0.80) 100%)"},{id:"crimson",name:["Silent Crimson","Merah Sunyi"],cost:220,reqTrophy:150,bg:"linear-gradient(180deg, rgba(56,8,26,0.86) 0%, rgba(30,5,16,0.60) 45%, rgba(10,2,6,0.92) 100%)"},{id:"toxic",name:["Toxic Neon","Neon Toxik"],cost:220,reqTrophy:150,bg:"linear-gradient(180deg, rgba(8,40,24,0.86) 0%, rgba(5,22,15,0.60) 45%, rgba(2,10,7,0.92) 100%)"}];function ri(n){return Ae.find(e=>e.id===n.skin)??Ae[0]}function li(n){return De.find(e=>e.id===n.theme)??De[0]}var _s="neon-survivor:meta";function ci(){let n={cores:0,trophies:0,missionCleared:["volt"],levels:{},chars:["volt"],sel:"volt",partner:"",lastSupply:"",trails:[],trail:"none",skins:[],skin:"default",themes:[],theme:"classic",effects:[],effect:"none"};if(typeof window>"u")return n;try{let e=SafeStorage.getItem(_s);if(!e)return n;let t=JSON.parse(e),i=Array.isArray(t.chars)?t.chars.filter(k=>typeof k=="string"):[];i.includes("volt")||i.unshift("volt");let mc=Array.isArray(t.missionCleared)?t.missionCleared.filter(k=>typeof k=="string"):[...i];mc.includes("volt")||mc.unshift("volt");let trp=Math.max(0,Math.floor(Number(t.trophies)||0));let s=t.sel&&i.includes(t.sel)?t.sel:"volt",a=Ne.map(k=>k.id),l=Array.isArray(t.trails)?t.trails.filter(k=>typeof k=="string"&&a.includes(k)):[],o=t.trail&&a.includes(t.trail)&&(t.trail==="none"||l.includes(t.trail))?t.trail:"none",c=Ae.map(k=>k.id),d=Array.isArray(t.skins)?t.skins.filter(k=>typeof k=="string"&&c.includes(k)&&k!=="default"):[],r=t.skin&&c.includes(t.skin)&&(t.skin==="default"||d.includes(t.skin))?t.skin:"default",p=De.map(k=>k.id),m=Array.isArray(t.themes)?t.themes.filter(k=>typeof k=="string"&&p.includes(k)&&k!=="classic"):[],b=t.theme&&p.includes(t.theme)&&(t.theme==="classic"||m.includes(t.theme))?t.theme:"classic",g=Ie.map(k=>k.id),y=Array.isArray(t.effects)?t.effects.filter(k=>typeof k=="string"&&g.includes(k)&&k!=="none"):[],S=t.effect&&g.includes(t.effect)&&(t.effect==="none"||y.includes(t.effect))?t.effect:"none";let prt=typeof t.partner=="string"&&i.includes(t.partner)&&t.partner!==s?t.partner:"",lsup=typeof t.lastSupply=="string"?t.lastSupply:"";return{cores:Math.max(0,Math.floor(Number(t.cores)||0)),trophies:trp,missionCleared:Array.from(new Set(mc)),levels:t.levels??{},chars:Array.from(new Set(i)),sel:s,partner:prt,lastSupply:lsup,trails:Array.from(new Set(l)),trail:o,skins:Array.from(new Set(d)),skin:r,themes:Array.from(new Set(m)),theme:b,effects:Array.from(new Set(y)),effect:S}}catch{return n}}function J(n){try{SafeStorage.setItem(_s,JSON.stringify(n));window.RedboundNet?.pushCloudVault?.()}catch{}}function zs(n,e,t=0){let i=Math.floor(Math.min(n,5e3)/250)+Math.floor(Math.max(0,Math.min(n-5e3,25e3))/650)+Math.floor(Math.max(0,n-3e4)/1400)+e*4;return Math.max(1,Math.floor(i*(1+.08*t)))}var Re=[{id:0,label:["CALM","AMAN"],interval:1,group:1,hp:1,spd:1,dmg:1,elite:0,horde:1,score:1},{id:1,label:["ROUGH","GAWAT"],interval:.88,group:1.2,hp:1.25,spd:1.06,dmg:1.1,elite:.01,horde:1.3,score:1.5},{id:2,label:["DANGER","BAHAYA"],interval:.76,group:1.4,hp:1.55,spd:1.12,dmg:1.2,elite:.02,horde:1.6,score:2},{id:3,label:["DEADLY","MEMATIKAN"],interval:.64,group:1.6,hp:1.9,spd:1.18,dmg:1.3,elite:.035,horde:2,score:3}],Fe=["#22d3ee","#facc15","#fb923c","#ef4444"];function ce(n){let e=Math.round(Number(n));return!Number.isFinite(e)||e<=0?0:Math.min(3,e)}function gt(n,e){let t=Re[ce(e)];return t.id===0?n:{...n,interval:n.interval*t.interval,group:Math.max(1,Math.round(n.group*t.group)),hp:n.hp*t.hp,spd:n.spd*t.spd,dmg:n.dmg*t.dmg,elite:n.elite+t.elite,horde:n.horde>0?Math.max(1,Math.round(n.horde*t.horde)):n.horde}}function yt(n){return Re[ce(n)].score}function Ge(n,e){let t=yt(n);return Number.isInteger(t)?`\xD7${t}`:`\xD7${e?String(t).replace(".",","):String(t)}`}var T=Math.PI*2,R=(n,e,t)=>Math.min(t,Math.max(e,n)),it=(n,e,t)=>n+(e-n)*t,z=(n,e,t,i)=>{let s=n-t,a=e-i;return s*s+a*a},x=(n,e)=>n+Math.random()*(e-n),B=(n,e)=>n[R(e-1,0,n.length-1)];function Ke(n,e,t,i,s){let m=e||{},a=n.mods.hp+(m.vitality??0)*12;return{x:2600/2,y:2600/2,r:15,hp:a,preDownHp:a,reviveHp:Math.round(a*.5),facing:-Math.PI/2,iFrames:0,hurtFlash:0,moveMag:0,char:n,meta:m,shield:m.guardian??0,weapons:{[n.startWeapon]:1},passives:{},evolved:new Set,level:1,xp:0,pendingLevels:0,bit:0,depot:Vs(),boltCd:0,novaCd:0,chainCd:0,missileCd:0,frostTick:0,orbitAngle:0,prismaCd:0,singCd:0,isBot:t,downed:!1,downT:0,revive:0,eliminated:!1,aiOrbitDir:1,aiOrbitA:x(0,T),aiThinkT:x(1,2),aiPickDelay:1,inX:0,inY:0,lastInputAt:0,skinShape:i?.shape??"tri",skinColor:i?.color??"",effectId:s&&s!=="none"?s:""}}var Xs=[["PRIMORDIAL SHADOW","BAYANGAN PRIMORDIAL"],["NEON QUEEN","RATU NEON"],["CORROSION TITAN","TITAN KOROSI"],["ANNIHILATOR CALIBER","KALIBUR PEMUSNAH"],["SOLARIS MATRIX","MATRIKS SOLARIS"],["DELTA OMEGA","DELTA OMEGA"]],In=[0,25,50,75,100,130],Rn=[0,.1,.2,.3,.4,.55],Bn=[1,1.12,1.24,1.36,1.48,1.65],Hn=[1,1.3,1.6,1.9,2.25,2.7],$n=[1,.93,.86,.79,.72,.65],On=[1,1.12,1.24,1.36,1.48,1.65],Nn=[0,.6,1.2,1.8,2.4,3.5],q=[{name:["BORDERLAND","PERBATASAN"],sub:["collect crystals & level up","kumpulkan kristal & naik level"],interval:1.15,group:1,hp:1,spd:1,dmg:1,elite:0,horde:0,weights:{grunt:10}},{name:["DIGITAL RUINS","RERUNTUH DIGITAL"],sub:["small packs start swarming in","kawanan kecil mulai berdatangan"],interval:1,group:2,hp:1.1,spd:1,dmg:1.05,elite:0,horde:6,weights:{grunt:9,swarm:7}},{name:["CORROSION GATE","GERBANG KOROSI"],sub:["shooters guard the gate \u2014 dodge their fire!","penembak menjaga gerbang \u2014 hindari pelurunya!"],interval:.9,group:2,hp:1.2,spd:1.02,dmg:1.1,elite:0,horde:7,weights:{grunt:8,swarm:6,shooter:4}},{name:["ARMOR DIVISION","PASUKAN BAJA"],sub:["tanks arrive \u2014 thick & slow","tank muncul \u2014 tebal & lambat"],interval:.82,group:3,hp:1.35,spd:1.04,dmg:1.16,elite:.01,horde:8,weights:{grunt:7,swarm:6,shooter:4,tank:3}},{name:["DOUBLE PARTITION","PARTISI GANDA"],sub:["splitters appear \u2014 they split on death!","pemecah hadir \u2014 mereka belah saat mati!"],interval:.75,group:3,hp:1.5,spd:1.05,dmg:1.22,elite:.02,horde:10,weights:{grunt:6,swarm:6,shooter:4,tank:3,splitter:4}},{name:["OVERCLOCK CYCLE","SIKLUS OVERCLOCK"],sub:["everything moves faster","semua gerak lebih cepat"],interval:.68,group:4,hp:1.7,spd:1.12,dmg:1.3,elite:.03,horde:12,weights:{grunt:6,swarm:7,shooter:4,tank:3,splitter:4}},{name:["HUNTER PROTOCOL","PROTOKOL PEMBURU"],sub:["elites hunt you \u2014 big XP reward","para elite memburumu \u2014 hadiah XP besar"],interval:.6,group:4,hp:1.95,spd:1.14,dmg:1.38,elite:.05,horde:14,weights:{grunt:5,swarm:6,shooter:5,tank:4,splitter:4}},{name:["TITAN UPRISING","TITAN BERBANGKIT"],sub:["tanks & splitters flood the arena","tank & pemecah membanjir arena"],interval:.54,group:5,hp:2.2,spd:1.16,dmg:1.48,elite:.06,horde:16,weights:{grunt:4,swarm:6,shooter:5,tank:5,splitter:5}},{name:["VIRALITY","VIRALITAS"],sub:["neon viruses spread wild","virus neon menyebar liar"],interval:.47,group:5,hp:2.5,spd:1.2,dmg:1.58,elite:.07,horde:18,weights:{grunt:4,swarm:8,shooter:5,tank:4,splitter:5}},{name:["SYSTEM CORE","INTI SISTEM"],sub:["final phase \u2014 survive & win!","fase terakhir \u2014 bertahan & menang!"],interval:.4,group:6,hp:2.8,spd:1.24,dmg:1.7,elite:.08,horde:22,weights:{grunt:4,swarm:7,shooter:5,tank:5,splitter:5}}],ARENA_BG_KEY="neon-survivor:arenaBg",arenaBgMode="auto",ARENA_BGS=[
   {id:"auto",icon:"✨",name:["Dynamic (By Level/Score)","Dinamis (Level/Poin)"],color:"#22d3ee"},
   {id:"random",icon:"🎲",name:["Random Mode","Acak"],color:"#a78bfa"},
   {id:"grid",icon:"▦",name:["Tactical Grid (Default)","Grid Dasar"],color:"#38bdf8"},
@@ -4380,28 +4380,39 @@ function buildLoginOverlay() {
     loginPane.style.display = "block";
   });
 
-  let completeAuth = (callsign, shipId, grantBonus, emailAddr="") => {
+  let completeAuth = (callsign, shipId, grantBonus, emailAddr="", loginId="", pwdVal="", cloudData=null) => {
     let cleanName = (callsign || "PILOT").split("@")[0].toUpperCase().slice(0, 16);
     let cleanEmail = (emailAddr || (callsign && callsign.includes("@") ? callsign : "")).trim().toLowerCase();
+    let cleanLoginId = (loginId || cleanEmail || cleanName).trim().toLowerCase();
     Dt = cleanName;
     try { SafeStorage.setItem(_e, cleanName); } catch {}
-    let nextChars = f.chars.includes(shipId) ? f.chars : [...f.chars, shipId];
-    let bonusCores = grantBonus ? 100 : 0;
-    f = { ...f, chars: nextChars, sel: shipId, cores: f.cores + bonusCores };
-    J(f);
     saveSession({
       callsign: cleanName,
       email: cleanEmail || null,
-      isGuest: !cleanEmail,
+      loginId: cleanLoginId,
+      pwdHash: pwdVal ? rbHash(pwdVal) : (currentPilotSession?.pwdHash || ""),
+      isGuest: !cleanEmail && !pwdVal,
       ship: shipId,
       registeredAt: cleanEmail ? new Date().toISOString() : null
     });
+    if (cloudData) {
+      window.RedboundNet?.applyCloudSnapshot(cloudData, false);
+    } else {
+      let nextChars = f.chars.includes(shipId) ? f.chars : [...f.chars, shipId];
+      let bonusCores = grantBonus ? 100 : 0;
+      f = { ...f, chars: nextChars, sel: shipId, cores: f.cores + bonusCores };
+    }
+    J(f);
+    window.RedboundNet?.subscribeSessionVault(currentPilotSession);
+    window.RedboundNet?.pushCloudVault();
     syncCloudReadyPayload(cleanEmail ? "email_authenticated" : "guest_login");
     H?.audio?.init();
     H?.audio?.levelup();
     if (H?.audio?.musicEnabled) H.audio.startMusic("menu");
     ovl.style.display = "none";
-    if (bonusCores > 0) {
+    if (cloudData) {
+      Ht(h(`☁ Cloud Account Restored: ${cleanName} (${F(f.cores)} ⬡ · ${F(f.trophies)} 🏆)`, `☁ Akun Cloud Dipulihkan: ${cleanName} (${F(f.cores)} ⬡ · ${F(f.trophies)} 🏆)`));
+    } else if (grantBonus) {
       Ht(h(`✨ Welcome ${cleanName}! +100 ⬡ Email Registration Bonus added!`, `✨ Selamat datang ${cleanName}! Bonus +100 ⬡ Pendaftaran Email diterima!`));
     } else {
       Ht(h(`✓ Pilot ${cleanName} authenticated!`, `✓ Akses Pilot ${cleanName} diterima!`));
@@ -4409,7 +4420,7 @@ function buildLoginOverlay() {
     Q();
   };
 
-  btnEnter.addEventListener("click", () => {
+  btnEnter.addEventListener("click", async () => {
     let idVal = idInp.value.trim();
     let pwdVal = pwdInp.value.trim();
     if (!idVal || pwdVal.length < 4) {
@@ -4420,14 +4431,51 @@ function buildLoginOverlay() {
     let accs = loadAccounts();
     let key = idVal.toLowerCase();
     let found = accs[key];
+    if (!found && !/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(key)) {
+      H?.audio?.hurt();
+      showLoginMsg(h("⚠ Pilot ID must be a valid email (nama@domain.com).", "⚠ ID Pilot harus email yang valid (nama@domain.com)."), "err");
+      return;
+    }
     if (found && found.code !== pwdVal) {
       H?.audio?.hurt();
       showLoginMsg(h("⚠ Incorrect Access Code for this Pilot ID.", "⚠ Kode Akses salah untuk ID Pilot tersebut."), "err");
       return;
     }
+    let origTxt = btnEnter.textContent;
+    btnEnter.textContent = h("☁ SYNCING CLOUD ACCOUNT...", "☁ MENYINKRONKAN AKUN CLOUD...");
+    btnEnter.disabled = true;
+    let cloudRes = { found: false };
+    try {
+      if (window.RedboundNet) {
+        cloudRes = await window.RedboundNet.pullCloudAccount(key, pwdVal, 4500);
+      }
+    } catch {}
+    btnEnter.textContent = origTxt;
+    btnEnter.disabled = false;
+    if (cloudRes && cloudRes.notRegistered) {
+      H?.audio?.hurt();
+      showLoginMsg(h("⚠ This email is not registered yet — click REGISTER NEW PILOT first.", "⚠ Email ini belum terdaftar — klik DAFTAR PILOT BARU dulu."), "err");
+      return;
+    }
+    if (cloudRes.found && cloudRes.authError) {
+      H?.audio?.hurt();
+      showLoginMsg(h("⚠ Incorrect Access Code for this Cloud Account.", "⚠ Kode Akses salah untuk Akun Cloud ini."), "err");
+      return;
+    }
+    if (cloudRes.found && cloudRes.data) {
+      let cd = cloudRes.data;
+      let rec = { callsign: cd.callsign || idVal.split("@")[0].toUpperCase(), email: cd.email || (idVal.includes("@") ? key : ""), code: pwdVal, ship: cd.meta?.sel || "volt", bonusClaimed: true, starterGiven: true };
+      accs[key] = rec;
+      if (rec.email) accs[rec.email] = rec;
+      if (rec.callsign) accs[rec.callsign.toLowerCase()] = rec;
+      saveAccounts(accs);
+      completeAuth(rec.callsign, rec.ship, false, rec.email, key, pwdVal, cd);
+      return;
+    }
+
     let giveStarter = false;
     if (!found) {
-      accs[key] = { callsign: idVal.split("@")[0].toUpperCase(), code: pwdVal, ship: f.sel || "volt", bonusClaimed: true };
+      accs[key] = { callsign: idVal.split("@")[0].toUpperCase(), email: idVal.includes("@") ? key : "", code: pwdVal, ship: f.sel || "volt", bonusClaimed: true, starterGiven: true };
       saveAccounts(accs);
       giveStarter = f.cores === 0;
     } else if (f.cores === 0 && !found.starterGiven) {
@@ -4435,28 +4483,61 @@ function buildLoginOverlay() {
       saveAccounts(accs);
       giveStarter = true;
     }
-    completeAuth(found ? found.callsign : idVal, found?.ship || f.sel || "volt", giveStarter, found?.email || (idVal.includes("@") ? idVal : ""));
+    completeAuth(found ? found.callsign : idVal, found?.ship || f.sel || "volt", giveStarter, found?.email || (idVal.includes("@") ? idVal : ""), key, pwdVal, null);
   });
 
   btnOffline.addEventListener("click", () => {
     completeAuth(Dt || "OFFLINE-PILOT", f.sel || "volt", false);
   });
 
-  btnRegSubmit.addEventListener("click", () => {
+  btnRegSubmit.addEventListener("click", async () => {
     let cs = (rCallInp.value.trim() || Dt || "PILOT").toUpperCase().slice(0, 16);
     let em = rEmailInp.value.trim().toLowerCase();
     let cd = rCodeInp.value.trim();
-    if (!cs || !em || !em.includes("@") || cd.length < 4) {
+    if (!cs || !/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(em) || cd.length < 6) {
       H?.audio?.hurt();
-      showLoginMsg(h("⚠ Enter Callsign, valid Email (@), and Access Code (min. 4 chars).", "⚠ Isi Nama Pilot, Email yang valid (@), dan Kode Akses (min. 4 karakter)."), "err");
+      showLoginMsg(h("⚠ Enter Callsign, a valid Email (nama@domain.com), and Access Code (min. 6 chars).", "⚠ Isi Nama Pilot, Email valid (nama@domain.com), dan Kode Akses (min. 6 karakter)."), "err");
       return;
     }
+    let origRegTxt = btnRegSubmit.textContent;
+    btnRegSubmit.textContent = h("☁ REGISTERING CLOUD ACCOUNT...", "☁ MENDAFTARKAN AKUN CLOUD...");
+    btnRegSubmit.disabled = true;
+    let cloudRes = { found: false };
+    let regBlocked = false;
+    try {
+      if (window.RedboundNet && window.RedboundNet.createCloudAccount) {
+        let rres = await window.RedboundNet.createCloudAccount(em, cd, cs, 9000);
+        if (rres && rres.ok) {
+          cloudRes = { found: false, registered: true };
+        } else if (rres && rres.status === 409) {
+          cloudRes = await window.RedboundNet.pullCloudAccount(em, cd, 9000);
+        } else if (rres && rres.unreachable) {
+          cloudRes = { found: false, offline: true }; // server down -> fallback lokal
+        } else {
+          regBlocked = true;
+          showLoginMsg(h("⚠ Cloud register failed: " + ((rres && rres.error) || "try again"), "⚠ Pendaftaran cloud gagal: " + ((rres && rres.error) || "coba lagi")), "err");
+        }
+      }
+    } catch (e) { cloudRes = { found: false, offline: true }; }
+    btnRegSubmit.textContent = origRegTxt;
+    btnRegSubmit.disabled = false;
+    if (regBlocked) return;
+    if (cloudRes.found && cloudRes.authError) {
+      H?.audio?.hurt();
+      showLoginMsg(h("⚠ Email already registered with a DIFFERENT Access Code — use LOGIN.", "⚠ Email sudah terdaftar dengan Kode Akses BERBEDA — gunakan MASUK."), "err");
+      return;
+    }
+
     let accs = loadAccounts();
     let rec = { callsign: cs, email: em, code: cd, ship: regSelectedShip, bonusClaimed: true, starterGiven: true, updatedAt: new Date().toISOString() };
     accs[em] = rec;
     accs[cs.toLowerCase()] = rec;
     saveAccounts(accs);
-    completeAuth(cs, regSelectedShip, f.cores === 0, em);
+    if (cloudRes.found && !cloudRes.authError && cloudRes.data) {
+      completeAuth(cs, regSelectedShip, false, em, em, cd, cloudRes.data);
+    } else {
+      completeAuth(cs, regSelectedShip, f.cores === 0, em, em, cd, null);
+    }
   });
 
   cardInner.append(loginPane, regPane);
@@ -5420,14 +5501,27 @@ function mqttMakeSubscribe(packetId, topic) {
   return out.buffer;
 }
 
-function mqttMakePublish(topic, jsonStr) {
+function rbHash(str) {
+  let s = String(str || "").trim().toLowerCase();
+  let h1 = 0xdeadbeef ^ s.length, h2 = 0x41c6ce57 ^ s.length;
+  for (let i = 0, ch; i < s.length; i++) {
+    ch = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
+}
+
+function mqttMakePublish(topic, jsonStr, retain = false) {
   let topB = new TextEncoder().encode(topic);
   let payB = new TextEncoder().encode(jsonStr);
   let vh = [(topB.length >> 8) & 0xff, topB.length & 0xff, ...topB];
   let remLen = vh.length + payB.length;
   let lenBytes = mqttEncodeLen(remLen);
   let out = new Uint8Array(1 + lenBytes.length + remLen);
-  out[0] = 0x30;
+  out[0] = retain ? 0x31 : 0x30;
   out.set(lenBytes, 1);
   out.set(vh, 1 + lenBytes.length);
   out.set(payB, 1 + lenBytes.length + vh.length);
@@ -5866,6 +5960,22 @@ class RedboundNetworkManager {
 
   handleInbound(msg, topic) {
     if (!msg || !msg.type) return;
+    if (msg.type === "cloud_vault_save") {
+      if (this._vaultWaiter) {
+        this._vaultWaiter(msg);
+        return;
+      }
+      if (msg._sender !== this.clientId && currentPilotSession) {
+        let myKeys = this.getVaultKeysForSession(currentPilotSession);
+        if (myKeys.some(k => topic && topic.includes(k))) {
+          let localTs = Number(SafeStorage.getItem("neon-survivor:cloudTs") || 0);
+          if ((msg.updatedAt || 0) > localTs) {
+            this.applyCloudSnapshot(msg, false);
+          }
+        }
+      }
+      return;
+    }
     if (msg._sender === this.clientId) return; // Ignore own echo
 
     // Deduplicate multi-broker messages & reject out-of-order stream packets from slower brokers
@@ -6025,6 +6135,181 @@ class RedboundNetworkManager {
 
   notifyStatus(text) {
     if (this.onStatusCb) this.onStatusCb(text);
+  }
+
+  publishRetained(fullTopic, obj) {
+    let seq = this.msgSeq++;
+    let pid = this.clientId + "_v_" + seq;
+    let jsonStr = JSON.stringify({ ...obj, _sender: this.clientId, _pid: pid, _seq: seq });
+    let open = this.getOpenSockets();
+    if (open.length === 0 && !this.connecting) {
+      this.connect();
+    }
+    let pkt = mqttMakePublish(fullTopic, jsonStr, true);
+    for (let s of open) {
+      try { s.send(pkt); } catch {}
+    }
+    if (this.bc) {
+      try { this.bc.postMessage({ topic: fullTopic, payload: jsonStr }); } catch {}
+    }
+  }
+
+  getVaultKeysForSession(sess) {
+    if (!sess) return [];
+    let keys = new Set();
+    if (sess.email) keys.add(rbHash(sess.email));
+    if (sess.loginId) keys.add(rbHash(sess.loginId));
+    if (sess.callsign && sess.callsign !== "OFFLINE-PILOT") keys.add(rbHash(sess.callsign));
+    return Array.from(keys);
+  }
+
+  subscribeSessionVault(sess) {
+    let keys = this.getVaultKeysForSession(sess || currentPilotSession);
+    for (let k of keys) {
+      let tf = `rb/v2/vault/${k}/save`;
+      this.activeTopics.add(tf);
+      this.sendSubToSockets(tf);
+    }
+  }
+
+  pushCloudVault() {
+    if (this._suppressCloudPush) return;
+    let sess = currentPilotSession;
+    if (!sess || (sess.isGuest && !sess.pwdHash && !sess.email)) return;
+    let pwdHash = sess.pwdHash || "";
+    if (!pwdHash) {
+      let accs = loadAccounts();
+      let rec = accs[(sess.email || "").toLowerCase()] || accs[(sess.callsign || "").toLowerCase()];
+      if (rec && rec.code) {
+        pwdHash = rbHash(rec.code);
+        sess.pwdHash = pwdHash;
+        saveSession(sess);
+      }
+    }
+    let keys = this.getVaultKeysForSession(sess);
+    if (keys.length === 0) return;
+    this._cloudRev = (this._cloudRev || Number(SafeStorage.getItem("neon-survivor:cloudRev") || 0)) + 1;
+    let nowTs = Date.now();
+    SafeStorage.setItem("neon-survivor:cloudRev", String(this._cloudRev));
+    SafeStorage.setItem("neon-survivor:cloudTs", String(nowTs));
+    let snapshot = {
+      type: "cloud_vault_save",
+      rev: this._cloudRev,
+      updatedAt: nowTs,
+      callsign: sess.callsign || Dt || "PILOT",
+      email: sess.email || "",
+      pwdHash: pwdHash,
+      meta: f,
+      progress: G,
+      best: we,
+      danger: It
+    };
+    this.connect().then(() => {
+      this.subscribeSessionVault(sess);
+      for (let k of keys) {
+        this.publishRetained(`rb/v2/vault/${k}/save`, snapshot);
+      }
+    });
+  }
+
+  pullCloudAccount(idVal, pwdVal, timeoutMs = 1500) {
+    let cleanId = String(idVal || "").trim().toLowerCase();
+    let inputPwdHash = rbHash(pwdVal);
+    let keyHash = rbHash(cleanId);
+    let topicFilter = `rb/v2/vault/${keyHash}/save`;
+    return new Promise((resolve) => {
+      let done = false;
+      let finish = (res) => {
+        if (done) return;
+        done = true;
+        this._vaultWaiter = null;
+        resolve(res);
+      };
+      let timer = setTimeout(() => finish({ found: false }), timeoutMs);
+      this._vaultWaiter = (msg) => {
+        clearTimeout(timer);
+        if (msg.pwdHash && msg.pwdHash !== inputPwdHash) {
+          finish({ found: true, authError: true });
+        } else {
+          finish({ found: true, authError: false, data: msg });
+        }
+      };
+      this.activeTopics.add(topicFilter);
+      this.connect().then(() => {
+        this.sendSubToSockets(topicFilter);
+      });
+    });
+  }
+
+  applyCloudSnapshot(snap, announce = false) {
+    if (!snap || !snap.meta) return false;
+    let localRev = Number(SafeStorage.getItem("neon-survivor:cloudRev") || 0);
+    let localTs = Number(SafeStorage.getItem("neon-survivor:cloudTs") || 0);
+    this._suppressCloudPush = true;
+    try {
+      let cm = snap.meta;
+      let mergedChars = Array.from(new Set([...(f.chars || ["volt"]), ...(cm.chars || ["volt"])]));
+      let mergedMc = Array.from(new Set([...(f.missionCleared || ["volt"]), ...(cm.missionCleared || ["volt"])]));
+      let mergedSkins = Array.from(new Set([...(f.skins || []), ...(cm.skins || [])]));
+      let mergedTrails = Array.from(new Set([...(f.trails || []), ...(cm.trails || [])]));
+      let mergedEffects = Array.from(new Set([...(f.effects || []), ...(cm.effects || [])]));
+      let mergedThemes = Array.from(new Set([...(f.themes || []), ...(cm.themes || [])]));
+      let mergedLevels = { ...(f.levels || {}), ...(cm.levels || {}) };
+      for (let k of Object.keys(mergedLevels)) {
+        mergedLevels[k] = Math.max(f.levels?.[k] || 0, cm.levels?.[k] || 0);
+      }
+      // Use authoritative cores from whichever snapshot is newer (or higher if fresh browser)
+      let useCloudCores = (snap.updatedAt || 0) >= localTs || (snap.rev || 0) >= localRev || (f.cores === 0 && (cm.cores || 0) > 0);
+      let nextCores = useCloudCores ? (cm.cores ?? f.cores) : Math.max(f.cores || 0, cm.cores || 0);
+      let nextTrophies = Math.max(f.trophies || 0, cm.trophies || 0);
+      f = {
+        ...f,
+        ...cm,
+        cores: nextCores,
+        trophies: nextTrophies,
+        chars: mergedChars,
+        missionCleared: mergedMc,
+        skins: mergedSkins,
+        trails: mergedTrails,
+        effects: mergedEffects,
+        themes: mergedThemes,
+        levels: mergedLevels,
+        sel: cm.sel && mergedChars.includes(cm.sel) ? cm.sel : f.sel
+      };
+      SafeStorage.setItem(_s, JSON.stringify(f));
+      if (snap.progress) {
+        let cp = snap.progress;
+        let mergedAch = Array.from(new Set([...(G?.ach || []), ...(cp.ach || [])]));
+        let mergedCounters = { ...(G?.counters || {}), ...(cp.counters || {}) };
+        for (let ck of Object.keys(mergedCounters)) {
+          if (typeof mergedCounters[ck] === "number") {
+            mergedCounters[ck] = Math.max(G?.counters?.[ck] || 0, cp.counters?.[ck] || 0);
+          }
+        }
+        G = {
+          ...(G || st()),
+          ...cp,
+          ach: mergedAch,
+          counters: mergedCounters,
+          shields: Math.max(G?.shields || 0, cp.shields || 0)
+        };
+        SafeStorage.setItem(Js, JSON.stringify(G));
+      }
+      if (typeof snap.best === "number" && snap.best > we) {
+        we = snap.best;
+        SafeStorage.setItem(Lt, String(we));
+      }
+      this._cloudRev = Math.max(localRev, snap.rev || 1);
+      SafeStorage.setItem("neon-survivor:cloudRev", String(this._cloudRev));
+      SafeStorage.setItem("neon-survivor:cloudTs", String(Math.max(localTs, snap.updatedAt || Date.now())));
+      Q();
+      if (announce) {
+        Ht(h(`☁ Cloud Sync Complete! (${F(f.cores)} ⬡ · ${F(f.trophies)} 🏆)`, `☁ Sinkronisasi Cloud Berhasil! (${F(f.cores)} ⬡ · ${F(f.trophies)} 🏆)`));
+      }
+    } finally {
+      this._suppressCloudPush = false;
+    }
+    return true;
   }
 
   cancel() {
@@ -6381,16 +6666,35 @@ function hn(){
   nameInp.addEventListener("keydown",(ev)=>{if(ev.key==="Enter")applyGuestOrPilotName()});
   nameRow.append(nameInp,saveNameBtn);
 
+  let syncNowBtn=L("button","settings-save-btn mono");
+  syncNowBtn.type="button";
+  syncNowBtn.id="settingsSyncCloudNowBtn";
+  syncNowBtn.style.cssText="width:100%;padding:8px 10px;text-align:center";
+  syncNowBtn.textContent=h("☁ SYNC CLOUD ACCOUNT NOW","☁ SINKRONKAN AKUN CLOUD SEKARANG");
+  syncNowBtn.addEventListener("click",async()=>{
+    H?.audio?.click();
+    let sess=currentPilotSession;
+    if(!sess||(sess.isGuest&&!sess.email&&!sess.pwdHash)){
+      settingsPop.classList.remove("open");
+      openEmailRegistrationModal(nameInp.value.trim());
+      return;
+    }
+    window.RedboundNet?.pushCloudVault();
+    Ht(h(`☁ Cloud Vault Synced! (${F(f.cores)} ⬡ · ${F(f.trophies)} 🏆)`,`☁ Akun & Koin Tersimpan di Cloud! (${F(f.cores)} ⬡ · ${F(f.trophies)} 🏆)`));
+  });
+
   let bindEmailBtn=L("button","settings-email-btn mono");
   bindEmailBtn.type="button";
   bindEmailBtn.id="settingsBindEmailBtn";
   bindEmailBtn.addEventListener("click",()=>{
     H?.audio?.click();
     settingsPop.classList.remove("open");
-    openEmailRegistrationModal(nameInp.value.trim());
+    let lovl=document.getElementById("loginOvl");
+    if(lovl)lovl.style.display="flex";
+    else buildLoginOverlay();
   });
 
-  accSec.append(accHead,nameRow,bindEmailBtn);
+  accSec.append(accHead,nameRow,syncNowBtn,bindEmailBtn);
   settingsPop.append(popTitle,d,accSec);
 
   gearBtn.addEventListener("click",(ev)=>{
@@ -7448,7 +7752,171 @@ function ga(){Ws(),tryEnterFullscreen(),window.addEventListener("pointerdown",tr
 try{let sil=new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");sil.volume=0.01;let sp=sil.play();if(sp&&sp.then)sp.then(()=>i()).catch(()=>{})}catch{}
 i();setTimeout(i,120);setTimeout(i,500);
 let _unlockTimer=setInterval(()=>{if(H?.audio?.ctx?.state==="running"&&H?.audio?.musicPlaying){clearInterval(_unlockTimer);return}i()},600);
-for(let evName of["pointerdown","pointermove","touchstart","touchmove","keydown","click","focus"])window.addEventListener(evName,i,{passive:!0,capture:!0});document.addEventListener("visibilitychange",()=>{document.hidden&&H.state==="playing"&&H.pause()}),window.addEventListener("keydown",s=>{(s.key==="m"||s.key==="M")&&!(s.target instanceof HTMLInputElement)&&!(s.target instanceof HTMLTextAreaElement)&&fn()}),window.addEventListener("keydown",s=>{if(!(V==="levelup"||V==="playing"&&de.length>0))return;let l=["1","2","3"].indexOf(s.key),o=l>=0?de[l]:void 0;o&&H.chooseUpgrade(o)}),Q(),Me();try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("room")){let lv=document.getElementById("loginOvl");if(lv)lv.style.display="none";setTimeout(()=>openOnlineLobbyModal(),350)}}catch(e){}}ga();})();
+for(let evName of["pointerdown","pointermove","touchstart","touchmove","keydown","click","focus"])window.addEventListener(evName,i,{passive:!0,capture:!0});document.addEventListener("visibilitychange",()=>{document.hidden&&H.state==="playing"&&H.pause()}),window.addEventListener("keydown",s=>{(s.key==="m"||s.key==="M")&&!(s.target instanceof HTMLInputElement)&&!(s.target instanceof HTMLTextAreaElement)&&fn()}),window.addEventListener("keydown",s=>{if(!(V==="levelup"||V==="playing"&&de.length>0))return;let l=["1","2","3"].indexOf(s.key),o=l>=0?de[l]:void 0;o&&H.chooseUpgrade(o)}),Q(),Me();setTimeout(()=>{if(currentPilotSession&&!currentPilotSession.isGuest){window.RedboundNet?.subscribeSessionVault(currentPilotSession);window.RedboundNet?.pushCloudVault();}},600);try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("room")){let lv=document.getElementById("loginOvl");if(lv)lv.style.display="none";setTimeout(()=>openOnlineLobbyModal(),350)}}catch(e){}}ga();})();
+</script>
+<script>
+/* =====================================================================
+   REDBOUND CLOUD VAULT -> SUPABASE (patch penghubung v2 — penguatan)
+   Perubahan vs v1:
+   - Status HTTP asli diteruskan ke game (409/401/404 terdeteksi benar).
+   - /pilots/register: pendaftaran akun WAJIB lewat server (email valid,
+     kode akses min. 6 karakter divalidasi handler game + server).
+   - Login ke email yang BELUM terdaftar -> ditolak dengan pesan jelas
+     (server unreachable -> fallback lokal tetap jalan agar offline aman).
+   - Logika game lain (rev/timestamp, co-op MQTT) tidak diubah.
+   URL server disuntik oleh deploy-supabase.sh pada placeholder di bawah.
+   ===================================================================== */
+(function(){
+  "use strict";
+  var APP_URL = "__SUPABASE_APP_URL__";
+  window.REDBOUND_CLOUD_URL = APP_URL;
+  if (!window.RedboundNet || APP_URL.indexOf("__") === 0) return; // placeholder belum disuntik -> perilaku lokal
+  var net = window.RedboundNet;
+
+  function post(path, bodyObj, timeoutMs) {
+    return new Promise(function(resolve){
+      var done = false;
+      var body = JSON.stringify(bodyObj);
+      var ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+      var opts = { method: "POST", headers: { "content-type": "application/json" }, body: body };
+      if (ctrl) opts.signal = ctrl.signal;
+      if (path === "/pilots/save" && body.length < 60000) opts.keepalive = true;
+      var to = setTimeout(function(){ if (!done) { done = true; try { ctrl && ctrl.abort(); } catch(e){} resolve({ ok:false, error:"timeout" }); } }, timeoutMs || 9000);
+      try {
+        fetch(APP_URL + path, opts).then(function(r){
+          var st = r.status;
+          return r.json().catch(function(){ return { ok:false, error:"respon tidak valid" }; }).then(function(j){
+            if (j && typeof j === "object") { j.status = (j.status !== undefined) ? j.status : st; }
+            return j;
+          });
+        }).then(function(j){
+          if (done) return; done = true; clearTimeout(to);
+          resolve(j || { ok:false });
+        }).catch(function(e){
+          if (done) return; done = true; clearTimeout(to);
+          resolve({ ok:false, error: String(e && e.message || e) });
+        });
+      } catch(e) { if (!done) { done = true; clearTimeout(to); resolve({ ok:false, error:String(e) }); } }
+    });
+  }
+
+  function mySess() {
+    try { if (typeof currentPilotSession !== "undefined" && currentPilotSession) return currentPilotSession; } catch(e) {}
+    return window.currentPilotSession || null;
+  }
+  function toastId(en, id) {
+    var now = Date.now();
+    if (toastId._last && now - toastId._last < 60000) return; // maks 1x per menit
+    toastId._last = now;
+    try { Ht(h(en, id)); } catch(e) {}
+  }
+  function vaultSnapshot(sess, ph) {
+    var rev = Number(SafeStorage.getItem("neon-survivor:cloudRev") || 0) + 1;
+    SafeStorage.setItem("neon-survivor:cloudRev", String(rev));
+    SafeStorage.setItem("neon-survivor:cloudTs", String(Date.now()));
+    return {
+      type: "cloud_vault_save",
+      rev: rev,
+      updatedAt: Date.now(),
+      callsign: (sess.callsign || Dt || "PILOT"),
+      email: (sess.email || ""),
+      pwdHash: ph,
+      meta: f,
+      progress: G,
+      best: we,
+      danger: It
+    };
+  }
+
+  // 1) Vault tidak lagi dipublikasikan/ditarik lewat broker MQTT publik.
+  net.subscribeSessionVault = function() {};
+
+  // 2) pushCloudVault -> POST /pilots/save (debounce 2,5 dtk + flush saat halaman ditutup)
+  var pushTimer = null;
+  function collectAuth() {
+    var sess = mySess();
+    if (!sess || (sess.isGuest && !sess.pwdHash && !sess.email)) return null;
+    var loginId = String(sess.email || sess.loginId || sess.callsign || "").trim().toLowerCase();
+    if (!loginId) return null;
+    var ph = sess.pwdHash || "";
+    if (!ph) {
+      try {
+        var accs = loadAccounts();
+        var rec = accs[loginId] || accs[String(sess.callsign || "").toLowerCase()];
+        if (rec && rec.code) ph = rbHash(rec.code);
+      } catch(e) {}
+    }
+    if (!ph) return null;
+    return { loginId: loginId, pwdHash: ph, sess: sess };
+  }
+  function doPush() {
+    pushTimer = null;
+    var a = collectAuth();
+    if (!a) return;
+    var snap = vaultSnapshot(a.sess, a.pwdHash);
+    post("/pilots/save", { login_id: a.loginId, pwd_hash: a.pwdHash, snapshot: snap }).then(function(res){
+      if (!res) return;
+      if (res.ok === false && res.code === "NOACCOUNT") {
+        toastId("⚠ Cloud: account not registered on server — use REGISTER NEW PILOT.", "⚠ Cloud: akun belum terdaftar di server — pakai DAFTAR PILOT BARU.");
+      } else if (res.ok === false && (res.status === 401 || res.status === 409)) {
+        toastId("⚠ Cloud: account exists with a different Access Code.", "⚠ Cloud: akun sudah ada dengan Kode Akses berbeda.");
+      } else if (res.ok === false && res.error !== "timeout") {
+        toastId("⚠ Cloud save failed — progress is safe on this device.", "⚠ Cloud save gagal — progres aman di perangkat ini.");
+      }
+    });
+  }
+  net.pushCloudVault = function() {
+    if (net._suppressCloudPush) return;
+    if (!collectAuth()) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(doPush, 2500);
+  };
+  try {
+    window.addEventListener("pagehide", function(){ if (pushTimer) { clearTimeout(pushTimer); doPush(); } }, { passive: true });
+    window.addEventListener("visibilitychange", function(){ if (document.visibilityState === "hidden" && pushTimer) { clearTimeout(pushTimer); doPush(); } }, { passive: true });
+  } catch(e) {}
+
+  // 3) pullCloudAccount -> POST /pilots/load
+  //    Hasil kini berbendera: unreachable (server tak terjangkau) dan
+  //    notRegistered (server PASTI menjawab: akun tidak ada).
+  net.pullCloudAccount = function(idVal, pwdVal, timeoutMs) {
+    var id = String(idVal || "").trim().toLowerCase();
+    try {
+      var rec = loadAccounts()[id];
+      if (rec && rec.email) id = String(rec.email).toLowerCase(); // panggilan pakai callsign -> petakan ke email
+    } catch(e) {}
+    var ph;
+    try { ph = rbHash(pwdVal); } catch(e) { ph = String(pwdVal || ""); }
+    return post("/pilots/load", { login_id: id, pwd_hash: ph }, timeoutMs || 9000).then(function(res){
+      if (!res || res.ok === false) return { found: false, unreachable: true };  // server down -> login lokal tetap jalan
+      if (!res.found) return { found: false, notRegistered: true };              // server jawab definitif: belum terdaftar
+      if (res.authError) return { found: true, authError: true };
+      return { found: true, authError: false, data: res.data };
+    });
+  };
+
+  // 4) createCloudAccount -> POST /pilots/register (pendaftaran WAJIB via server)
+  net.createCloudAccount = function(idVal, pwdVal, callsignVal, timeoutMs) {
+    var id = String(idVal || "").trim().toLowerCase();
+    var ph;
+    try { ph = rbHash(pwdVal); } catch(e) { ph = String(pwdVal || ""); }
+    return post("/pilots/register", { login_id: id, pwd_hash: ph, callsign: String(callsignVal || "").slice(0, 32) }, timeoutMs || 9000).then(function(res){
+      if (!res || res.ok === false) {
+        if (res && res.status === 409) return { ok: false, status: 409, error: (res && res.error) || "email sudah terdaftar" };
+        var netDown = !(res && res.status);
+        return { ok: false, unreachable: netDown, error: (res && res.error) || "gagal" };
+      }
+      return { ok: true, created: true };
+    });
+  };
+
+  // 5) Alat bantu debug/manual: REDBOUND_CLOUD.push() / .pull(id, kode) / .url
+  window.REDBOUND_CLOUD = {
+    url: APP_URL,
+    push: function(){ net.pushCloudVault(); },
+    pull: function(id, pw){ return net.pullCloudAccount(id, pw); }
+  };
+})();
 </script>
 </body>
 </html>
