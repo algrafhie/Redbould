@@ -4385,6 +4385,7 @@ function buildLoginOverlay() {
     let cleanEmail = (emailAddr || (callsign && callsign.includes("@") ? callsign : "")).trim().toLowerCase();
     let cleanLoginId = (loginId || cleanEmail || cleanName).trim().toLowerCase();
     Dt = cleanName;
+    try { SafeStorage.removeItem("neon-survivor:autoBattle"); } catch(e) {}
     try { SafeStorage.setItem(_e, cleanName); } catch {}
     saveSession({
       callsign: cleanName,
@@ -7440,7 +7441,7 @@ function Qn(){
 
 function renderStudioStatusRow(unlocked, selected, reqTrophy, cost){
   if(selected) return `<div class="studio-req-row"><span style="color:#4ade80">✓ ${h("Equipped","Terpasang")}</span></div>`;
-  if(unlocked) return `<div class="studio-req-row"><span style="color:#94a3b8">${h("Unlocked · Tap to use","Terbuka · Pakai")}</span></div>`;
+  if(unlocked) return `<div class="studio-req-row"><span style="color:#94a3b8">${h("Tap to use","Ketuk untuk pakai")}</span></div>`;
   let trpOk = (f.trophies||0) >= (reqTrophy||0);
   let trpPart = (reqTrophy > 0 && !trpOk)
     ? `<span style="color:#fde047">🔒 ${F(reqTrophy)} 🏆</span><span style="color:rgba(255,255,255,0.35)">·</span>`
@@ -7551,7 +7552,7 @@ function oa(n){let e=Ie.find(t=>t.id===n);if(!e)return;if(f.effects.includes(n)|
 function ra(){!G||G.shields>=Ve||f.cores<xe||Ot("shield","shield",h("Streak Shield","Perisai Streak"),xe)}
 function an(n){let e=en(n,f.chars.length);G=at(st()),Te=e.totalCores>0?e:null;let t=zs(n.score,n.bosses,f.levels.tuner??0)+e.totalCores;let earnedT=calcRunTrophies(n);lastEarnedTrophies=earnedT;f={...f,cores:f.cores+Math.max(0,t),trophies:(f.trophies||0)+earnedT};J(f);ct=t;n.score>we?(SafeStorage.setItem(Lt,String(n.score)),we=n.score,At=!0):At=!1,syncCloudReadyPayload("run_complete"),checkGuestRunRegistrationPrompt()}
 function mn(n,e,t,i){n.innerHTML="";let s=u("tabs");for(let o of["solo","squad"]){let c=L("button","tabbtn mono"+(e===o?` active a-${o==="squad"?"violet":"cyan"}`:""));c.textContent=o==="solo"?"\u{1F464} SOLO":"\u{1F91D} SQUAD",c.addEventListener("click",()=>i(o)),s.append(c)}n.append(s);let a=dt(e==="squad"?$t:ht);if(a.length===0){let o=u("emptynote");o.textContent=e==="squad"?h("No squads yet \u2014 finish a Co-op Duet to record your team!","Belum ada squad \u2014 tuntaskan Co-op Duet untuk mencatat hasil timmu!"):h("No scores yet \u2014 be the first!","Belum ada skor \u2014 jadilah yang pertama!"),n.append(o);return}let l=L("ol","boardlist");a.forEach((o,c)=>{let d=L("li","boardrow"+(t!==void 0&&o.score===t?" mine":"")),r=P("board-no mono");r.textContent=String(c+1),r.style.color=jn(c);let p=u("board-mid"),m=u("board-nm");if(m.textContent=o.name,(o.danger??0)>0){let y=P("board-dgr mono");y.textContent=Ge(o.danger??0,Ee()==="id"),y.style.setProperty("--dc",Fe[ce(o.danger)]),m.append(y)}let b=u("board-sub mono");b.textContent=e==="squad"?`\u2716${o.kills} \xB7 ${Pt(o.survived)} \xB7 LV ${o.level}`:`${Pt(o.survived)} \xB7 \u2716${o.kills} \xB7 LV ${o.level}`,p.append(m,b);let g=P("board-sc mono");g.textContent=F(o.score),d.append(r,p,g),l.append(d)}),n.append(l)}
-function fi(n){I=null,At=!1,rt=null,Rt="idle",ct=null,Te=null;let e=Ne.find(a=>a.id===f.trail)?.color??"",t=ri(f),i=t.id==="default"?void 0:{shape:t.shape,color:t.color},s=f.effect!=="none"?f.effect:void 0,prt=(f.partner&&f.partner!==f.sel&&f.chars.includes(f.partner))?f.partner:(Qe[f.sel]??f.sel);H.startRun({charId:f.sel,partnerId:prt,meta:f.levels,unlocked:Array.from(new Set([...f.chars,...(f.missionCleared||[])])),mode:n,trail:e,skin:i,effect:s,danger:It})}
+function fi(n){try{SafeStorage.setItem("neon-survivor:autoBattle",JSON.stringify({mode:n,at:Date.now()}))}catch(e){}I=null,At=!1,rt=null,Rt="idle",ct=null,Te=null;let e=Ne.find(a=>a.id===f.trail)?.color??"",t=ri(f),i=t.id==="default"?void 0:{shape:t.shape,color:t.color},s=f.effect!=="none"?f.effect:void 0,prt=(f.partner&&f.partner!==f.sel&&f.chars.includes(f.partner))?f.partner:(Qe[f.sel]??f.sel);H.startRun({charId:f.sel,partnerId:prt,meta:f.levels,unlocked:Array.from(new Set([...f.chars,...(f.missionCleared||[])])),mode:n,trail:e,skin:i,effect:s,danger:It})}
 function un(){H.backToMenu(),Q(),checkGuestRunRegistrationPrompt()}
 function la(n){if(!f.chars.includes(n))return;inspectedPilotId=n;if(f.sel===n){H.audio.click();nn(ee(n));scrollToPilotSpecs();return}f={...f,sel:n},J(f),H.audio.click(),Q(),scrollToPilotSpecs()}
 function ca(n){let e=f.levels[n.id]??0;if(e>=n.max)return;let reqT=n.reqTrophy?.[e]??0;if((f.trophies||0)<reqT){H.audio.hurt();Ht(h(`🔒 Trophy Gate: Need ${F(reqT)} 🏆 to unlock ${v(n.name)} Lv ${e+1}.`,`🔒 Gembok Trophy: Butuh ${F(reqT)} 🏆 untuk membuka ${v(n.name)} Lv ${e+1}.`));return}let t=n.cost[e]??0;if(f.cores<t){H.audio.hurt();Ht(h(`⚠ Need ${F(t)} ⬡ Neon Cores.`,`⚠ Butuh ${F(t)} ⬡ Inti Neon.`));return}f={...f,cores:f.cores-t,levels:{...f.levels,[n.id]:e+1}},J(f),H.audio.click(),Et(`${v(n.name)} Lv ${e+1}`,t),Q()}
@@ -7748,7 +7749,7 @@ var He=null,ln=0;
 function Et(n,e){Ht(`${h("\u2713 Purchased: ","\u2713 Terbeli: ")}${n} <b class="pink">\u2212${e}\u2B21</b>`)}
 function qe(n,e){let t=document.getElementById(n);t&&(t.style.display=e?"":"none")}
 function Me(){qe("menu",V==="menu"),qe("levelup",V==="levelup"),qe("pause",V==="paused");let n=V==="depot"&&X!==null;qe("depot",n),n&&ua();let e=(V==="gameover"||V==="victory")&&I!==null;qe("end",e),e&&gi();let t=V==="playing"&&K?.mode==="coop"&&K?.choiceIn!=null&&de.length>0;if(qe("coopPop",t),t&&K){$("coopTitle").textContent=h(`\u26A1 Level Up ${K.level}!`,`\u26A1 Naik Level ${K.level}!`),$("coopCd").textContent=`${Math.ceil(K.choiceIn??0)}s`;let i=Math.max(0,Math.min(100,(K.choiceIn??0)/10*100));$("coopFill").style.width=`${i}%`,on("coopGrid",de,!0)}V==="levelup"&&K&&($("lvlTitle").textContent=h(`\u2B06 Level Up ${K.level}!`,`\u2B06 Naik Level ${K.level}!`),on("lvlGrid",de,!1)),V==="paused"&&fa()}
-function ga(){Ws(),tryEnterFullscreen(),window.addEventListener("pointerdown",tryEnterFullscreen,{passive:!0}),window.addEventListener("keydown",tryEnterFullscreen,{passive:!0}),arenaBgMode=SafeStorage.getItem(ARENA_BG_KEY)||'auto',currentPilotSession=loadSession(),It=ce(Number(SafeStorage.getItem(cn)??0)),f=ci(),G=at(st()),we=Number(SafeStorage.getItem(Lt)??0),Dt=currentPilotSession?.callsign||SafeStorage.getItem(_e)||"";let n=L("canvas");n.id="cv",n.setAttribute("aria-label","Kanvas permainan Redbound"),document.body.prepend(n);let e=u();e.id="overlay-root",document.body.append(e);let t=u("hintbar mono");t.textContent=h("WASD move \xB7 P pause","WASD gerak \xB7 P jeda"),document.body.append(t),hn(),bn(),gn(),yn(),vn(),kn(),H=new vt(n,{onHud:s=>{K=s,V==="playing"&&s.choiceIn==null&&de.length>0&&(de=[]),Me()},onLevelUp:s=>{de=s,Me()},onDepot:s=>{X=s,Me()},onGameOver:s=>{I=s,an(s),s.mode==="coop"?$e=`${(SafeStorage.getItem(_e)??"").trim()||h("YOU","KAMU")} & ${s.allyName??h("PARTNER","MITRA")}`.slice(0,24):$e="",Bt=s.mode==="coop"?"squad":"solo",Me()},onVictory:s=>{I=s,an(s),s.mode==="coop"?$e=`${(SafeStorage.getItem(_e)??"").trim()||h("YOU","KAMU")} & ${s.allyName??h("PARTNER","MITRA")}`.slice(0,24):$e="",Bt=s.mode==="coop"?"squad":"solo",Me()},onPauseRequest:()=>{H.state==="playing"?H.pause():H.state==="paused"&&H.resume()},onStateChange:s=>{V=s,s==="playing"&&K?.choiceIn==null&&de.length>0&&(de=[]),s!=="depot"&&X!==null&&(X=null),Me()},onUnlock:s=>{let mc=f.missionCleared||[];mc.includes(s)||(f={...f,missionCleared:[...mc,s]},J(f)),ba(s)},onNetEvent:(t,p)=>{window.RedboundNet?.handleGameNetEvent(t,p)}}),window.__neon=H;let i=()=>{if(!H||!H.audio)return;H.audio.init();if(H.audio.ctx&&H.audio.ctx.state==="suspended"){try{H.audio.ctx.resume()}catch{}}let lovl=document.getElementById("loginOvl");let mode=(lovl&&lovl.style.display!=="none")?"login":"menu";if(H.state==="menu"&&H.audio.musicEnabled&&!H.audio.muted){if(!H.audio.musicPlaying||H.audio.musicMode!==mode)H.audio.startMusic(mode)}};
+function ga(){Ws(),tryEnterFullscreen(),window.addEventListener("pointerdown",tryEnterFullscreen,{passive:!0}),window.addEventListener("keydown",tryEnterFullscreen,{passive:!0}),arenaBgMode=SafeStorage.getItem(ARENA_BG_KEY)||'auto',currentPilotSession=loadSession(),It=ce(Number(SafeStorage.getItem(cn)??0)),f=ci(),G=at(st()),we=Number(SafeStorage.getItem(Lt)??0),Dt=currentPilotSession?.callsign||SafeStorage.getItem(_e)||"";let n=L("canvas");n.id="cv",n.setAttribute("aria-label","Kanvas permainan Redbound"),document.body.prepend(n);let e=u();e.id="overlay-root",document.body.append(e);let t=u("hintbar mono");t.textContent=h("WASD move \xB7 P pause","WASD gerak \xB7 P jeda"),document.body.append(t),hn(),bn(),gn(),yn(),vn(),kn(),H=new vt(n,{onHud:s=>{K=s,V==="playing"&&s.choiceIn==null&&de.length>0&&(de=[]),Me()},onLevelUp:s=>{de=s,Me()},onDepot:s=>{X=s,Me()},onGameOver:s=>{I=s,an(s),s.mode==="coop"?$e=`${(SafeStorage.getItem(_e)??"").trim()||h("YOU","KAMU")} & ${s.allyName??h("PARTNER","MITRA")}`.slice(0,24):$e="",Bt=s.mode==="coop"?"squad":"solo",Me()},onVictory:s=>{I=s,an(s),s.mode==="coop"?$e=`${(SafeStorage.getItem(_e)??"").trim()||h("YOU","KAMU")} & ${s.allyName??h("PARTNER","MITRA")}`.slice(0,24):$e="",Bt=s.mode==="coop"?"squad":"solo",Me()},onPauseRequest:()=>{H.state==="playing"?H.pause():H.state==="paused"&&H.resume()},onStateChange:s=>{V=s;if(s==="menu"||s==="gameover"||s==="victory"){try{SafeStorage.removeItem("neon-survivor:autoBattle")}catch(e){}}s==="playing"&&K?.choiceIn==null&&de.length>0&&(de=[]),s!=="depot"&&X!==null&&(X=null),Me()},onUnlock:s=>{let mc=f.missionCleared||[];mc.includes(s)||(f={...f,missionCleared:[...mc,s]},J(f)),ba(s)},onNetEvent:(t,p)=>{window.RedboundNet?.handleGameNetEvent(t,p)}}),window.__neon=H;let i=()=>{if(!H||!H.audio)return;H.audio.init();if(H.audio.ctx&&H.audio.ctx.state==="suspended"){try{H.audio.ctx.resume()}catch{}}let lovl=document.getElementById("loginOvl");let mode=(lovl&&lovl.style.display!=="none")?"login":"menu";if(H.state==="menu"&&H.audio.musicEnabled&&!H.audio.muted){if(!H.audio.musicPlaying||H.audio.musicMode!==mode)H.audio.startMusic(mode)}};
 try{let sil=new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");sil.volume=0.01;let sp=sil.play();if(sp&&sp.then)sp.then(()=>i()).catch(()=>{})}catch{}
 i();setTimeout(i,120);setTimeout(i,500);
 let _unlockTimer=setInterval(()=>{if(H?.audio?.ctx?.state==="running"&&H?.audio?.musicPlaying){clearInterval(_unlockTimer);return}i()},600);
@@ -7768,7 +7769,7 @@ for(let evName of["pointerdown","pointermove","touchstart","touchmove","keydown"
    ===================================================================== */
 (function(){
   "use strict";
-  var APP_URL = "__SUPABASE_APP_URL__";
+  var APP_URL = "https://rpkispipazjiunjylaxu.supabase.co/functions/v1/app";
   window.REDBOUND_CLOUD_URL = APP_URL;
   if (!window.RedboundNet || APP_URL.indexOf("__") === 0) return; // placeholder belum disuntik -> perilaku lokal
   var net = window.RedboundNet;
@@ -7916,6 +7917,111 @@ for(let evName of["pointerdown","pointermove","touchstart","touchmove","keydown"
     push: function(){ net.pushCloudVault(); },
     pull: function(id, pw){ return net.pullCloudAccount(id, pw); }
   };
+})();
+</script>
+<script>
+/* REDBOUND UX PATCH v3 — pemulihan arena & tombol kembali (DOM-only) */
+(function(){
+  var BK="neon-survivor:autoBattle", LK="neon-survivor:session", LG="neon-survivor:lang-v2";
+  function lang(){ try{ var v=localStorage.getItem(LG); return v==="id"?"id":"en"; }catch(e){ return "en"; } }
+  function tr(en,id){ return lang()==="id"?id:en; }
+  function rbToast(msg){
+    try{
+      var t=document.createElement("div");
+      t.style.cssText="position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147483646;background:rgba(11,14,29,.92);border:1px solid rgba(34,211,238,.4);color:#a5f3fc;font:700 11px ui-monospace,Menlo,monospace;padding:8px 14px;border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.5);white-space:nowrap";
+      t.textContent=msg;document.body.appendChild(t);
+      setTimeout(function(){t.style.transition="opacity .5s";t.style.opacity="0";},2400);
+      setTimeout(function(){t.remove();},3000);
+    }catch(e){}
+  }
+  // ---- 1) Setelah refresh: kembali masuk ke arena tempur (run dimulai ulang di arena yang sama) ----
+  try{
+    var isRoom=/[?&]room=/.test(location.search);
+    var sess=null; try{ sess=JSON.parse(localStorage.getItem(LK)||"null"); }catch(e){}
+    var lovl=document.getElementById("loginOvl");
+    var loginVisible=!!(lovl&&lovl.style.display!=="none");
+    var raw=null; try{ raw=localStorage.getItem(BK); }catch(e){}
+    if(!isRoom&&sess&&!loginVisible&&raw){
+      var inf=null; try{ inf=JSON.parse(raw); }catch(e){}
+      try{ localStorage.removeItem(BK); }catch(e){}
+      if(inf&&(inf.mode==="timed"||inf.mode==="mission")&&(Date.now()-(inf.at||0))<30*60*1000){
+        setTimeout(function(){
+          try{
+            var want=inf.mode==="timed"?"Time Attack":"Mission";
+            var rows=document.querySelectorAll(".seg-tabs"),modeRow=null;
+            for(var i=0;i<rows.length&&!modeRow;i++){
+              var bs=rows[i].querySelectorAll("button");
+              for(var j=0;j<bs.length;j++){ if(bs[j].textContent.trim()==="Time Attack"){ modeRow=rows[i]; break; } }
+            }
+            if(!modeRow)return;
+            var mbtn=null,bs2=modeRow.querySelectorAll("button");
+            for(var k=0;k<bs2.length;k++){ if(bs2[k].textContent.trim()===want){ mbtn=bs2[k]; break; } }
+            if(!mbtn)return;
+            mbtn.click();
+            setTimeout(function(){
+              try{
+                var all=document.querySelectorAll("button"),lb=null;
+                for(var m=0;m<all.length;m++){ var tt=all[m].textContent.trim(); if(tt==="START BATTLE"||tt==="MULAI TEMPUR"){ lb=all[m]; break; } }
+                if(lb){ lb.click(); rbToast(tr("\u27F3 Reloaded \u2014 back in the arena!","\u27F3 Dimuat ulang \u2014 kembali ke arena tempur!")); }
+              }catch(e){}
+            },90);
+          }catch(e){}
+        },400);
+      }
+    }
+  }catch(e){}
+  // ---- 2) Tombol kembali -> dialog konfirmasi keluar; back 2x saat dialog terbuka = keluar ----
+  var dlg=null,exiting=false;
+  function ensureDlg(){
+    if(dlg&&dlg.isConnected)return dlg;
+    dlg=document.createElement("div");
+    dlg.id="rbExitOvl";
+    dlg.style.cssText="position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(2,3,12,.84)";
+    dlg.innerHTML='<div style="max-width:330px;width:88%;background:#0b0e1d;border:1px solid rgba(34,211,238,.35);border-radius:14px;padding:18px 16px;text-align:center;font-family:ui-monospace,Menlo,monospace;box-shadow:0 0 44px rgba(34,211,238,.15)">'
+      +'<div style="font-weight:900;letter-spacing:1px;color:#e2e8f0;font-size:15px;margin-bottom:7px">'+tr("\u27F5 EXIT REDBOUND?","\u27F5 KELUAR DARI REDBOUND?")+'</div>'
+      +'<div style="color:#94a3b8;font-size:11.5px;line-height:1.5;margin-bottom:15px">'+tr("Your progress is saved automatically to the cloud.","Progresmu tersimpan otomatis di cloud.")+'</div>'
+      +'<div style="display:flex;gap:10px;justify-content:center">'
+      +'<button id="rbExitNo" style="flex:1;padding:10px 6px;border-radius:10px;border:1px solid #334155;background:#111827;color:#e2e8f0;font-weight:800;font-size:12px;font-family:inherit;cursor:pointer">'+tr("STAY","BATAL")+'</button>'
+      +'<button id="rbExitYes" style="flex:1;padding:10px 6px;border-radius:10px;border:1px solid rgba(239,68,68,.55);background:#2a0d12;color:#fca5a5;font-weight:800;font-size:12px;font-family:inherit;cursor:pointer">'+tr("EXIT APP","KELUAR")+'</button>'
+      +'</div></div>';
+    document.body.appendChild(dlg);
+    dlg.querySelector("#rbExitNo").addEventListener("click",function(ev){ev.stopPropagation();dlg.style.display="none";});
+    dlg.querySelector("#rbExitYes").addEventListener("click",function(ev){ev.stopPropagation();confirmExit();});
+    return dlg;
+  }
+  function showDlg(){ensureDlg().style.display="flex";}
+  function dlgOpen(){return !!(dlg&&dlg.isConnected&&dlg.style.display!=="none");}
+  function confirmExit(){
+    if(dlgOpen())dlg.style.display="none";
+    exiting=true;
+    try{if(window.RedboundApp&&typeof window.RedboundApp.exit==="function"){window.RedboundApp.exit();return;}}catch(e){}
+    try{window.close();}catch(e){}
+    setTimeout(function(){try{history.back();}catch(e){}},80);
+    setTimeout(function(){
+      if(exiting&&!document.hidden){
+        exiting=false;
+        rbToast(tr("You can close this tab now.","Silakan tutup tab/jendela ini."));
+      }
+    },600);
+  }
+  // Hook utk cangkang APK baru (MainActivity memanggil window.__rbAndroidBack())
+  window.__rbAndroidBack=function(){
+    if(dlgOpen()){confirmExit();return "handled";}
+    showDlg();return "handled";
+  };
+  // Trap history utk browser: back pertama -> dialog, back kedua -> keluar
+  try{
+    history.replaceState({rbTrap:1},"");
+    history.pushState({rbTrap:2},"");
+    window.addEventListener("popstate",function(){
+      if(exiting)return;
+      if(dlgOpen()){confirmExit();}
+      else{
+        showDlg();
+        setTimeout(function(){try{history.pushState({rbTrap:2},"")}catch(e){}},0);
+      }
+    });
+  }catch(e){}
 })();
 </script>
 </body>
