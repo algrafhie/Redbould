@@ -3628,8 +3628,9 @@ guestSnapshot(e){
   this.snapWatchdog=0;
   let isMotion=!!e.m;
   let prevTime=this._lastSnapTime||0;
+  if(isMotion&&typeof e.time==="number"&&prevTime>0&&e.time<prevTime)return;
   let dt=prevTime>0&&e.time>prevTime?R(e.time-prevTime,.02,.4):.08;
-  this._lastSnapTime=e.time||this.gameTime;
+  if(typeof e.time==="number"&&e.time>prevTime)this._lastSnapTime=e.time;
   let applyPos=(a,l,o)=>{
     if(a===1)return; // Guest owns local player position 100% — never overwrite!
     let c=this.mirrorEnts.get(a);
@@ -5398,7 +5399,7 @@ function mqttMakePublish(topic, jsonStr) {
 
 class RedboundNetworkManager {
   constructor() {
-    this.ws = null;
+    this.sockets = [];
     this.bc = null;
     this.clientId = "rb_" + Math.random().toString(36).substring(2, 10) + "_" + (Date.now() % 10000);
     this.role = null; // "host" | "guest"
@@ -5413,12 +5414,17 @@ class RedboundNetworkManager {
     this.hostHeartbeat = null;
     this.guestRetryTimer = null;
     this.searchSec = 0;
-    this.connected = false;
     this.connecting = false;
     this.connectWaiters = [];
     this.pktId = 1;
-    this.subscribedTopics = new Set();
+    this.msgSeq = 1;
+    this.seenMsgIds = new Set();
+    this.activeTopics = new Set();
+    this.pendingMatchInfo = null;
     this.initBroadcastChannel();
+    this.initLifecycleRecovery();
+    // Pre-warm broker connections immediately so matchmaking & room join are instant
+    setTimeout(() => this.connect(), 100);
   }
 
   initBroadcastChannel() {
@@ -5437,10 +5443,42 @@ class RedboundNetworkManager {
     } catch {}
   }
 
+  initLifecycleRecovery() {
+    if (typeof window === "undefined") return;
+    const recover = () => {
+      if (this.status !== "idle") {
+        this.ensureConnected();
+      }
+    };
+    window.addEventListener("focus", recover);
+    window.addEventListener("online", recover);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) recover();
+      });
+    }
+  }
+
+  getOpenSockets() {
+    this.sockets = this.sockets.filter(s => s && (s.readyState === 0 || s.readyState === 1));
+    return this.sockets.filter(s => s._mqttReady && s.readyState === 1);
+  }
+
+  ensureConnected() {
+    let open = this.getOpenSockets();
+    if (open.length === 0 && !this.connecting) {
+      this.connect();
+    } else {
+      for (let t of this.activeTopics) {
+        this.sendSubToSockets(t);
+      }
+    }
+  }
+
   getMyPilot() {
     let pDef = ee(f.sel);
-    let cName = currentPilotSession?.callsign || Dt || "PILOT-" + this.clientId.replace(/[^a-zA-Z0-9]/g,"").slice(-4).toUpperCase();
-    if (cName === "OFFLINE-PILOT") cName = "PILOT-" + this.clientId.replace(/[^a-zA-Z0-9]/g,"").slice(-4).toUpperCase();
+    let cName = currentPilotSession?.callsign || Dt || "PILOT-" + this.clientId.replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase();
+    if (cName === "OFFLINE-PILOT") cName = "PILOT-" + this.clientId.replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase();
     let mySkin = ri(f);
     let skinObj = mySkin.id === "default" ? undefined : { shape: mySkin.shape, color: mySkin.color };
     let effectVal = f.effect !== "none" ? f.effect : undefined;
@@ -5457,7 +5495,7 @@ class RedboundNetworkManager {
   }
 
   connect() {
-    if (this.connected && this.ws && this.ws.readyState === 1) {
+    if (this.getOpenSockets().length > 0) {
       return Promise.resolve();
     }
     return new Promise((resolve) => {
@@ -5471,7 +5509,10 @@ class RedboundNetworkManager {
         "wss://test.mosquitto.org:8081/mqtt"
       ];
 
+      let resolvedOnce = false;
       let flushWaiters = () => {
+        if (resolvedOnce) return;
+        resolvedOnce = true;
         this.connecting = false;
         let list = this.connectWaiters.splice(0);
         for (let fn of list) {
@@ -5479,29 +5520,37 @@ class RedboundNetworkManager {
         }
       };
 
-      let tryIndex = (idx) => {
-        if (idx >= brokers.length) {
-          // Even if offline/restricted, resolve so BroadcastChannel or retry works
-          this.connected = true;
+      let pendingCount = brokers.length;
+      let markDone = () => {
+        pendingCount--;
+        if (pendingCount <= 0) {
+          this.connecting = false;
           flushWaiters();
-          return;
         }
+      };
+
+      // Connect to available brokers in parallel so both devices ALWAYS share a common broker
+      brokers.forEach((url, idx) => {
         try {
-          let s = new WebSocket(brokers[idx], ["mqtt"]);
+          let s = new WebSocket(url, ["mqtt"]);
           s.binaryType = "arraybuffer";
+          s._mqttReady = false;
+          s._subs = new Set();
+          this.sockets.push(s);
+
           let settled = false;
           let to = setTimeout(() => {
             if (settled) return;
             settled = true;
             try { s.close(); } catch {}
-            tryIndex(idx + 1);
-          }, 3200);
+            markDone();
+          }, 4000);
 
           s.onopen = () => {
             try {
-              s.send(mqttMakeConnect(this.clientId));
+              s.send(mqttMakeConnect(this.clientId + "_" + idx));
             } catch {
-              if (!settled) { settled = true; clearTimeout(to); tryIndex(idx + 1); }
+              if (!settled) { settled = true; clearTimeout(to); markDone(); }
             }
           };
 
@@ -5520,16 +5569,16 @@ class RedboundNetworkManager {
               }
               let pktEnd = i + remLen;
               if (pktType === 0x20) { // CONNACK
+                s._mqttReady = true;
                 if (!settled) {
                   settled = true;
                   clearTimeout(to);
-                  this.ws = s;
-                  this.connected = true;
-                  this.subscribedTopics.clear();
-                  this.startKeepAlive();
-                  if (this.roomCode) this.subRoomTopics(this.roomCode);
-                  flushWaiters();
                 }
+                this.startKeepAlive();
+                for (let t of this.activeTopics) {
+                  this.sendSubToSocket(s, t);
+                }
+                flushWaiters();
               } else if (pktType === 0x30 && pktEnd <= buf.length) { // PUBLISH
                 let topLen = (buf[i] << 8) | buf[i + 1];
                 let topStart = i + 2;
@@ -5563,52 +5612,75 @@ class RedboundNetworkManager {
             if (!settled) {
               settled = true;
               clearTimeout(to);
-              tryIndex(idx + 1);
+              markDone();
             }
           };
 
           s.onclose = () => {
-            if (this.ws === s) {
-              this.connected = false;
-              this.ws = null;
+            s._mqttReady = false;
+            this.sockets = this.sockets.filter(x => x !== s);
+            if (!settled) {
+              settled = true;
+              clearTimeout(to);
+              markDone();
             }
           };
         } catch {
-          tryIndex(idx + 1);
+          markDone();
         }
-      };
-
-      tryIndex(0);
+      });
     });
   }
 
   startKeepAlive() {
-    if (this.pingTimer) clearInterval(this.pingTimer);
+    if (this.pingTimer) return;
     this.pingTimer = setInterval(() => {
-      if (this.ws && this.ws.readyState === 1) {
-        try { this.ws.send(new Uint8Array([0xc0, 0x00]).buffer); } catch {}
+      let open = this.getOpenSockets();
+      for (let s of open) {
+        try { s.send(new Uint8Array([0xc0, 0x00]).buffer); } catch {}
       }
-    }, 15000);
+      if (this.status !== "idle" && open.length === 0 && !this.connecting) {
+        this.connect();
+      }
+    }, 12000);
+  }
+
+  sendSubToSocket(s, topicFilter) {
+    if (!s || !s._mqttReady || s.readyState !== 1) return;
+    if (!s._subs) s._subs = new Set();
+    if (s._subs.has(topicFilter)) return;
+    s._subs.add(topicFilter);
+    this.pktId = (this.pktId % 65000) + 1;
+    try { s.send(mqttMakeSubscribe(this.pktId, topicFilter)); } catch {}
+  }
+
+  sendSubToSockets(topicFilter) {
+    for (let s of this.getOpenSockets()) {
+      this.sendSubToSocket(s, topicFilter);
+    }
   }
 
   subRoomTopics(code) {
     if (!code) return;
-    let subTarget = code === "LOBBY" ? "#" : (this.role === "host" ? "guest" : this.role === "guest" ? "host" : "#");
-    let topicFilter = `rb/v2/${code}/${subTarget}`;
-    if (this.ws && this.ws.readyState === 1 && !this.subscribedTopics.has(topicFilter)) {
-      this.subscribedTopics.add(topicFilter);
-      this.pktId = (this.pktId % 65000) + 1;
-      try { this.ws.send(mqttMakeSubscribe(this.pktId, topicFilter)); } catch {}
-    }
+    let topicFilter = `rb/v2/${code}/#`;
+    this.activeTopics.add(topicFilter);
+    this.sendSubToSockets(topicFilter);
   }
 
   publish(subTopic, obj, overrideRoom) {
     let targetRoom = overrideRoom || this.roomCode;
     if (!targetRoom) return;
     let fullTopic = `rb/v2/${targetRoom}/${subTopic}`;
-    let jsonStr = JSON.stringify({ ...obj, _room: targetRoom, _sender: this.clientId });
-    if (this.ws && this.ws.readyState === 1) {
-      try { this.ws.send(mqttMakePublish(fullTopic, jsonStr)); } catch {}
+    let seq = this.msgSeq++;
+    let pid = this.clientId + "_" + seq;
+    let jsonStr = JSON.stringify({ ...obj, _room: targetRoom, _sender: this.clientId, _pid: pid, _seq: seq });
+    let open = this.getOpenSockets();
+    if (open.length === 0 && !this.connecting) {
+      this.connect();
+    }
+    let pkt = mqttMakePublish(fullTopic, jsonStr);
+    for (let s of open) {
+      try { s.send(pkt); } catch {}
     }
     if (this.bc) {
       try { this.bc.postMessage({ topic: fullTopic, payload: jsonStr }); } catch {}
@@ -5623,45 +5695,58 @@ class RedboundNetworkManager {
   }
 
   // --- 1. INVITE ROOM: HOST ---
-  createInviteRoom(code, onStatus) {
+  createInviteRoom(code, onStatus, fromQuickMatch = false) {
     this.clearTimers();
+    if (!fromQuickMatch) this.pendingMatchInfo = null;
     this.onStatusCb = onStatus;
     this.roomCode = code.trim().toUpperCase();
     this.role = "host";
     this.status = "waiting_for_guest";
-    this.notifyStatus(h(`Room ${this.roomCode} active! Share code with friend. Waiting...`, `Room ${this.roomCode} aktif! Bagikan kode ke teman. Menunggu teman...`));
+    if (!fromQuickMatch) {
+      this.notifyStatus(h(`Room ${this.roomCode} active! Share code with friend. Waiting...`, `Room ${this.roomCode} aktif! Bagikan kode ke teman. Menunggu teman...`));
+    }
 
+    this.subRoomTopics(this.roomCode);
     this.connect().then(() => {
       if (this.status !== "waiting_for_guest") return;
       this.subRoomTopics(this.roomCode);
       let sendReady = () => {
         if (this.status === "waiting_for_guest" && this.role === "host") {
+          this.ensureConnected();
           this.publish("host", {
             type: "host_ready",
             room: this.roomCode,
             pilot: this.getMyPilot()
           });
+          // If this room was created via Co-op Duet Quick Match, also re-announce on LOBBY so partner never misses it
+          if (this.pendingMatchInfo) {
+            this.publish("match", this.pendingMatchInfo, "LOBBY");
+          }
         }
       };
       sendReady();
-      this.hostHeartbeat = setInterval(sendReady, 700);
+      this.hostHeartbeat = setInterval(sendReady, 550);
     });
   }
 
   // --- 2. INVITE ROOM: GUEST ---
-  joinRoom(code, onStatus) {
+  joinRoom(code, onStatus, fromQuickMatch = false) {
     this.clearTimers();
     this.onStatusCb = onStatus;
     this.roomCode = code.trim().toUpperCase();
     this.role = "guest";
     this.status = "connecting_to_host";
-    this.notifyStatus(h(`Connecting to Room ${this.roomCode}...`, `Menghubungkan ke Room ${this.roomCode}...`));
+    if (!fromQuickMatch) {
+      this.notifyStatus(h(`Connecting to Room ${this.roomCode}...`, `Menghubungkan ke Room ${this.roomCode}...`));
+    }
 
+    this.subRoomTopics(this.roomCode);
     this.connect().then(() => {
       if (this.status !== "connecting_to_host") return;
       this.subRoomTopics(this.roomCode);
       let sendJoin = () => {
         if (this.status === "connecting_to_host" && this.role === "guest") {
+          this.ensureConnected();
           this.publish("guest", {
             type: "guest_join",
             room: this.roomCode,
@@ -5675,19 +5760,20 @@ class RedboundNetworkManager {
         if (this.status === "connecting_to_host") {
           tries++;
           sendJoin();
-          if (tries === 8) {
-            this.notifyStatus(h(`Still waiting for Host in Room ${this.roomCode}... Make sure your friend has the Online Lobby open!`, `Menunggu Host di Room ${this.roomCode}... Pastikan teman membuka Lobi Online!`));
+          if (tries === 10 && !fromQuickMatch) {
+            this.notifyStatus(h(`Waiting for Host in Room ${this.roomCode}... Make sure your friend opened Online Lobby!`, `Menunggu Host di Room ${this.roomCode}... Pastikan teman membuka Lobi Online!`));
           }
         } else {
           clearInterval(this.guestRetryTimer);
         }
-      }, 650);
+      }, 500);
     });
   }
 
   // --- 3. CO-OP DUET ONLINE QUICK MATCH (REAL USER MATCHMAKING) ---
   startQuickMatch(onStatus) {
     this.clearTimers();
+    this.pendingMatchInfo = null;
     this.onStatusCb = onStatus;
     this.status = "quick_searching";
     this.role = null;
@@ -5702,11 +5788,13 @@ class RedboundNetworkManager {
       }
     }, 1000);
 
+    this.subRoomTopics("LOBBY");
     this.connect().then(() => {
       if (this.status !== "quick_searching") return;
       this.subRoomTopics("LOBBY");
       let sendSeek = () => {
         if (this.status === "quick_searching") {
+          this.ensureConnected();
           this.publish("seek", {
             type: "qm_seek",
             cid: this.clientId,
@@ -5716,7 +5804,7 @@ class RedboundNetworkManager {
         }
       };
       sendSeek();
-      this.seekInterval = setInterval(sendSeek, 800);
+      this.seekInterval = setInterval(sendSeek, 600);
     });
   }
 
@@ -5725,9 +5813,17 @@ class RedboundNetworkManager {
     let amHost = this.clientId === hostCid;
     this.notifyStatus(h(`⚡ Partner detected (${otherPilot.name})! Locking room ${pairRoom}...`, `⚡ Pasangan ditemukan (${otherPilot.name})! Mengunci room ${pairRoom}...`));
     if (amHost) {
-      this.createInviteRoom(pairRoom, this.onStatusCb);
+      this.pendingMatchInfo = {
+        type: "qm_match",
+        hostCid,
+        guestCid,
+        room: pairRoom,
+        fromCid: this.clientId,
+        pilot: this.getMyPilot()
+      };
+      this.createInviteRoom(pairRoom, this.onStatusCb, true);
     } else {
-      this.joinRoom(pairRoom, this.onStatusCb);
+      this.joinRoom(pairRoom, this.onStatusCb, true);
     }
   }
 
@@ -5735,25 +5831,50 @@ class RedboundNetworkManager {
     if (!msg || !msg.type) return;
     if (msg._sender === this.clientId) return; // Ignore own echo
 
-    // --- QUICK MATCH LOBBY PAIRING ---
-    if (this.status === "quick_searching" && (msg._room === "LOBBY" || (topic && topic.includes("/LOBBY/")))) {
-      if (msg.type === "qm_seek" && msg.cid && msg.cid !== this.clientId) {
-        let ids = [this.clientId, msg.cid].sort();
-        let pairRoom = "QM-" + ids[0].slice(-4).toUpperCase() + ids[1].slice(-4).toUpperCase();
-        // Announce match so the other client also transitions immediately even if their seek arrived first
-        this.publish("match", {
-          type: "qm_match",
-          hostCid: ids[0],
-          guestCid: ids[1],
-          room: pairRoom,
-          fromCid: this.clientId,
-          pilot: this.getMyPilot()
-        }, "LOBBY");
-        this.transitionFromLobbyToPair(ids[0], ids[1], pairRoom, msg.pilot);
-        return;
+    // Deduplicate multi-broker messages & reject out-of-order stream packets from slower brokers
+    if (msg._pid) {
+      if (this.seenMsgIds.has(msg._pid)) return;
+      this.seenMsgIds.add(msg._pid);
+      if (this.seenMsgIds.size > 600) {
+        let first = this.seenMsgIds.values().next().value;
+        this.seenMsgIds.delete(first);
       }
-      if (msg.type === "qm_match" && (msg.hostCid === this.clientId || msg.guestCid === this.clientId)) {
-        this.transitionFromLobbyToPair(msg.hostCid, msg.guestCid, msg.room, msg.pilot);
+    }
+    if (msg.type === "game_event" && (msg.evt === "in" || msg.evt === "msnap" || msg.evt === "snap") && typeof msg._seq === "number") {
+      if (!this.peerSeqMap) this.peerSeqMap = new Map();
+      let streamKey = msg._sender + ":" + (msg.evt === "in" ? "in" : "snap");
+      let lastSeq = this.peerSeqMap.get(streamKey) || 0;
+      if (msg._seq <= lastSeq && msg.evt !== "snap") return; // Never let a slow broker's old msnap/in overwrite newer state
+      if (msg._seq > lastSeq) this.peerSeqMap.set(streamKey, msg._seq);
+    }
+
+    // --- QUICK MATCH LOBBY PAIRING ---
+    let isLobbyMsg = msg._room === "LOBBY" || (topic && topic.includes("/LOBBY/"));
+    if (isLobbyMsg) {
+      if (this.status === "quick_searching") {
+        if (msg.type === "qm_seek" && msg.cid && msg.cid !== this.clientId) {
+          let ids = [this.clientId, msg.cid].sort();
+          let pairRoom = "QM-" + ids[0].slice(-4).toUpperCase() + ids[1].slice(-4).toUpperCase();
+          this.publish("match", {
+            type: "qm_match",
+            hostCid: ids[0],
+            guestCid: ids[1],
+            room: pairRoom,
+            fromCid: this.clientId,
+            pilot: this.getMyPilot()
+          }, "LOBBY");
+          this.transitionFromLobbyToPair(ids[0], ids[1], pairRoom, msg.pilot);
+          return;
+        }
+        if (msg.type === "qm_match" && (msg.hostCid === this.clientId || msg.guestCid === this.clientId)) {
+          this.transitionFromLobbyToPair(msg.hostCid, msg.guestCid, msg.room, msg.pilot);
+          return;
+        }
+      } else if (this.status === "waiting_for_guest" && this.pendingMatchInfo && msg.type === "qm_seek") {
+        // Partner is still in LOBBY — re-send qm_match immediately
+        if (msg.cid === this.pendingMatchInfo.guestCid) {
+          this.publish("match", this.pendingMatchInfo, "LOBBY");
+        }
         return;
       }
     }
@@ -5762,10 +5883,11 @@ class RedboundNetworkManager {
     if (msg._room && this.roomCode && msg._room !== this.roomCode) return;
 
     // --- ROOM HANDSHAKE: HOST SIDE ---
-    if (this.role === "host" && (msg.type === "guest_join" || msg.type === "host_ready")) {
-      if (msg.type === "guest_join" && this.status === "waiting_for_guest") {
+    if (this.role === "host" && msg.type === "guest_join") {
+      if (this.status === "waiting_for_guest") {
         this.status = "paired";
         this.partner = msg.pilot;
+        this.pendingMatchInfo = null;
         this.clearTimers();
         this.notifyStatus(h(`⚡ Friend connected: ${msg.pilot.name}! Launching battle...`, `⚡ Terhubung dengan ${msg.pilot.name}! Memulai pertempuran...`));
 
@@ -5775,10 +5897,11 @@ class RedboundNetworkManager {
           hostPilot: this.getMyPilot(),
           guestPilot: msg.pilot
         };
-        // Send 3 burst packets to guarantee delivery over mobile networks
+        this.lastStartPkt = startPkt;
         this.publish("host", startPkt);
         setTimeout(() => this.publish("host", startPkt), 120);
-        setTimeout(() => this.publish("host", startPkt), 260);
+        setTimeout(() => this.publish("host", startPkt), 280);
+        setTimeout(() => this.publish("host", startPkt), 480);
 
         if (this.onMatched) this.onMatched(msg.pilot, this.roomCode);
         setTimeout(() => {
@@ -5797,7 +5920,11 @@ class RedboundNetworkManager {
             danger: It
           });
           H.pushBanner(`ONLINE SQUAD · ${this.roomCode}`, h(`partner: ${msg.pilot.name} — fight together!`, `mitra: ${msg.pilot.name} — berjuang bersama!`), "#22d3ee", 3.2);
-        }, 420);
+        }, 320);
+        return;
+      } else if (this.status === "paired" && this.lastStartPkt) {
+        // Guest missed earlier game_start burst — re-send immediately!
+        this.publish("host", this.lastStartPkt);
         return;
       }
     }
@@ -5805,7 +5932,6 @@ class RedboundNetworkManager {
     // --- ROOM HANDSHAKE: GUEST SIDE ---
     if (this.role === "guest" && this.status === "connecting_to_host") {
       if (msg.type === "host_ready") {
-        // Host is here! Immediately reply with guest_join
         this.publish("guest", {
           type: "guest_join",
           room: this.roomCode,
@@ -5825,7 +5951,7 @@ class RedboundNetworkManager {
           document.getElementById("onlineLobbyModal")?.remove();
           H.startGuest(this.getMyPilot(), msg.hostPilot);
           H.pushBanner(`ONLINE SQUAD · ${this.roomCode}`, h(`partner: ${msg.hostPilot.name} — synced!`, `mitra: ${msg.hostPilot.name} — sinkronisasi aktif!`), "#34d399", 3.2);
-        }, 420);
+        }, 250);
         return;
       }
     }
@@ -5866,12 +5992,12 @@ class RedboundNetworkManager {
 
   cancel() {
     this.clearTimers();
+    this.pendingMatchInfo = null;
     this.status = "idle";
     this.role = null;
     this.onMatched = null;
   }
 }
-
 window.RedboundNet = new RedboundNetworkManager();
 
 // =========================================================================
