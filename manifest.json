@@ -1,6 +1,6 @@
 {
   "id": "/",
-  "name": "REDBOUND Tactical Arena",
+  "name": "REDBOUND Tactical Arena v2.1.6.0",
   "short_name": "REDBOUND",
   "description": "REDBOUND \u2014 Tactical Bullet-Heaven Arcade: Time Attack, Mission Mode, Co-op Duet & Online Arena.",
   "start_url": "/?source=pwa",
@@ -43,5 +43,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "version": "2.1.6.0"
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'redbound-app-v2.1.5';
+const CACHE_NAME = 'redbound-app-v2.1.6.0';
 const ASSETS = [
   '/',
   '/index.html',
