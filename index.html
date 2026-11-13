@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="autoplay-policy" content="no-user-gesture-required">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#05060f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -10062,17 +10063,27 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
     position: fixed;
     inset: 0;
     z-index: 999999;
-    background: radial-gradient(circle at 50% 45%, #0e1329 0%, #070812 70%, #04050b 100%);
+    background: radial-gradient(circle at 50% 44%, #0e1329 0%, #070812 70%, #04050b 100%);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     pointer-events: auto;
     opacity: 1;
-    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
   #rbOpeningIntroOverlay.rb-intro-hide {
     opacity: 0;
+    pointer-events: none;
+  }
+  .rb-intro-center-stack {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     pointer-events: none;
   }
   .rb-intro-emblem-wrap {
@@ -10089,12 +10100,10 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
     align-items: center;
     justify-content: center;
     transform: scale(0.92);
-    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
-    z-index: 2;
-    pointer-events: none;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s ease;
   }
   .rb-intro-emblem-wrap.rb-impact {
-    transform: scale(1.06);
+    transform: scale(1.05);
     box-shadow:
       0 0 65px rgba(0, 240, 255, 0.55),
       0 0 95px rgba(244, 63, 94, 0.45),
@@ -10115,17 +10124,102 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
     animation: rbIntroSpinRev 9s linear infinite;
   }
   .rb-intro-docked-ship {
-    width: 112px;
-    height: 112px;
+    width: 114px;
+    height: 114px;
     object-fit: contain;
     opacity: 0;
-    transform: scale(0.65);
-    filter: drop-shadow(0 0 18px rgba(0, 240, 255, 0.85));
-    transition: opacity 0.32s ease, transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    transform: scale(0.62);
+    filter: drop-shadow(0 0 18px rgba(0, 240, 255, 0.88));
+    transition: opacity 0.42s ease, transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .rb-intro-emblem-wrap.rb-impact .rb-intro-docked-ship {
     opacity: 1;
     transform: scale(1);
+    animation: rbDockedFloat 2.2s ease-in-out infinite alternate;
+  }
+  @keyframes rbDockedFloat {
+    from { transform: scale(0.98) translateY(2px); filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.75)); }
+    to { transform: scale(1.04) translateY(-4px); filter: drop-shadow(0 0 26px rgba(244, 63, 94, 0.9)); }
+  }
+  .rb-intro-loader-wrap {
+    margin-top: 34px;
+    width: 248px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .rb-intro-loader-wrap.rb-loader-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .rb-loader-bar-shell {
+    position: relative;
+    width: 100%;
+    height: 12px;
+    padding: 2px;
+    border-radius: 999px;
+    background: rgba(9, 14, 28, 0.92);
+    border: 1.5px solid rgba(0, 240, 255, 0.38);
+    box-shadow:
+      0 0 20px rgba(0, 240, 255, 0.22),
+      inset 0 1px 4px rgba(0, 0, 0, 0.9);
+    overflow: hidden;
+  }
+  .rb-loader-bar-fill {
+    position: relative;
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f43f5e 0%, #fb7185 38%, #00f0ff 100%);
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.9), 0 0 24px rgba(244, 63, 94, 0.65);
+    transition: width 0.08s linear;
+  }
+  .rb-loader-bar-fill::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 18px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 100%);
+    filter: blur(1px);
+  }
+  .rb-loader-segments {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 10px,
+      rgba(5, 8, 18, 0.55) 10px,
+      rgba(5, 8, 18, 0.55) 12px
+    );
+    pointer-events: none;
+  }
+  .rb-loader-nodes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .rb-loader-node {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.22);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    transition: all 0.25s ease;
+  }
+  .rb-loader-node.on {
+    background: #00f0ff;
+    border-color: #ffffff;
+    box-shadow: 0 0 10px #00f0ff, 0 0 18px rgba(244, 63, 94, 0.7);
+    transform: scale(1.18);
   }
   #rbOpeningIntroCanvas {
     position: absolute;
@@ -10146,31 +10240,51 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
   }
 </style>
 
+<!-- Declarative Auto-Audio Elements for Immediate Zero-Tap Playback in Intro & Menu -->
+<audio id="rbIntroAutoAudio" autoplay playsinline preload="auto" style="display:none"></audio>
+<audio id="rbMenuAutoAudio" loop playsinline preload="auto" style="display:none"></audio>
+
 <div id="rbOpeningIntroOverlay" aria-hidden="true">
-  <div class="rb-intro-emblem-wrap" id="rbIntroEmblemBox">
-    <svg class="rb-intro-ring-outer" viewBox="0 0 200 200">
-      <defs>
-        <filter id="rbIntroCrimsonGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <circle cx="100" cy="100" r="86" fill="none" stroke="rgba(244,63,94,0.22)" stroke-width="3" />
-      <circle cx="100" cy="100" r="82" fill="none" stroke="#f43f5e" stroke-width="9"
-              stroke-dasharray="95 32 70 28 110 35" filter="url(#rbIntroCrimsonGlow)" />
-      <circle cx="100" cy="100" r="68" fill="none" stroke="rgba(244,63,94,0.65)" stroke-width="2"
-              stroke-dasharray="8 6 24 8 6 6 40 12" />
-    </svg>
-    <svg class="rb-intro-ring-inner" viewBox="0 0 160 160">
-      <circle cx="80" cy="80" r="64" fill="none" stroke="rgba(0,240,255,0.32)" stroke-width="2.5"
-              stroke-dasharray="36 18 12 18" />
-      <circle cx="80" cy="80" r="52" fill="none" stroke="rgba(244,63,94,0.45)" stroke-width="1.5"
-              stroke-dasharray="4 8" />
-    </svg>
-    <img id="rbIntroDockedShip" class="rb-intro-docked-ship" alt="" />
+  <div class="rb-intro-center-stack">
+    <div class="rb-intro-emblem-wrap" id="rbIntroEmblemBox">
+      <svg class="rb-intro-ring-outer" viewBox="0 0 200 200">
+        <defs>
+          <filter id="rbIntroCrimsonGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <circle cx="100" cy="100" r="86" fill="none" stroke="rgba(244,63,94,0.22)" stroke-width="3" />
+        <circle cx="100" cy="100" r="82" fill="none" stroke="#f43f5e" stroke-width="9"
+                stroke-dasharray="95 32 70 28 110 35" filter="url(#rbIntroCrimsonGlow)" />
+        <circle cx="100" cy="100" r="68" fill="none" stroke="rgba(244,63,94,0.65)" stroke-width="2"
+                stroke-dasharray="8 6 24 8 6 6 40 12" />
+      </svg>
+      <svg class="rb-intro-ring-inner" viewBox="0 0 160 160">
+        <circle cx="80" cy="80" r="64" fill="none" stroke="rgba(0,240,255,0.32)" stroke-width="2.5"
+                stroke-dasharray="36 18 12 18" />
+        <circle cx="80" cy="80" r="52" fill="none" stroke="rgba(244,63,94,0.45)" stroke-width="1.5"
+                stroke-dasharray="4 8" />
+      </svg>
+      <img id="rbIntroDockedShip" class="rb-intro-docked-ship" alt="" />
+    </div>
+
+    <div class="rb-intro-loader-wrap" id="rbIntroLoaderWrap">
+      <div class="rb-loader-bar-shell">
+        <div class="rb-loader-bar-fill" id="rbIntroLoaderFill"></div>
+        <div class="rb-loader-segments"></div>
+      </div>
+      <div class="rb-loader-nodes" id="rbIntroLoaderNodes">
+        <span class="rb-loader-node"></span>
+        <span class="rb-loader-node"></span>
+        <span class="rb-loader-node"></span>
+        <span class="rb-loader-node"></span>
+        <span class="rb-loader-node"></span>
+      </div>
+    </div>
   </div>
   <canvas id="rbOpeningIntroCanvas"></canvas>
 </div>
@@ -10181,7 +10295,346 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
   const canvas = document.getElementById("rbOpeningIntroCanvas");
   const emblemBox = document.getElementById("rbIntroEmblemBox");
   const dockedShip = document.getElementById("rbIntroDockedShip");
+  const loaderWrap = document.getElementById("rbIntroLoaderWrap");
+  const loaderFill = document.getElementById("rbIntroLoaderFill");
+  const loaderNodes = document.querySelectorAll("#rbIntroLoaderNodes .rb-loader-node");
+  const introAudioEl = document.getElementById("rbIntroAutoAudio");
+  const menuAudioEl = document.getElementById("rbMenuAutoAudio");
   if (!overlay || !canvas) return;
+
+  const SHIP_PHASE_END = 4300;
+  const LOADER_START = 4050;
+  const INTRO_DURATION = 8550;
+
+  // Fast Runtime PCM WAV Synthesizer (Zero HTML bloat, plays via HTML5 <audio autoplay> AND WebAudio)
+  function encodeWavFromSamples(samples, sr) {
+    const n = samples.length;
+    const buf = new ArrayBuffer(44 + n);
+    const view = new DataView(buf);
+    const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+    writeStr(0, "RIFF");
+    view.setUint32(4, 36 + n, true);
+    writeStr(8, "WAVE");
+    writeStr(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sr, true);
+    view.setUint32(28, sr, true);
+    view.setUint16(32, 1, true);
+    view.setUint16(34, 8, true);
+    writeStr(36, "data");
+    view.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) {
+      const v = Math.max(-1, Math.min(1, samples[i]));
+      view.setUint8(44 + i, ((v * 0.5 + 0.5) * 255) | 0);
+    }
+    const bytes = new Uint8Array(buf);
+    let bin = "";
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return "data:audio/wav;base64," + btoa(bin);
+  }
+
+  function buildIntroWavUri() {
+    const sr = 6000;
+    const dur = 8.4;
+    const n = (sr * dur) | 0;
+    const samples = new Float32Array(n);
+
+    // 1. Jet dive turbine sweep (0.0s .. 0.85s)
+    for (let i = 0; i < (0.85 * sr) | 0; i++) {
+      const t = i / sr;
+      const env = Math.sin((t / 0.85) * Math.PI) * 0.25;
+      const freq = 250 * Math.pow(72 / 250, t / 0.85);
+      samples[i] += env * Math.sin(2 * Math.PI * freq * t);
+    }
+
+    // 2. Authentic Redbound shoot() barrage (0.65s .. 3.65s)
+    let shotT = 0.65, shotIdx = 0;
+    while (shotT < 3.65) {
+      const s0 = (shotT * sr) | 0;
+      const sLen = (0.085 * sr) | 0;
+      const pMul = 1 + (shotIdx % 4) * 0.06;
+      for (let k = 0; k < sLen && s0 + k < n; k++) {
+        const dt = k / sr;
+        const fCur = (880 * pMul) * Math.pow(320 / 880, dt / 0.085);
+        const env = Math.pow(1 - dt / 0.085, 1.6) * 0.34;
+        const sq = Math.sin(2 * Math.PI * fCur * dt) >= 0 ? 1 : -1;
+        const rail = Math.sin(2 * Math.PI * (185 * (1 - dt * 5.5)) * dt) * 0.45;
+        samples[s0 + k] += env * (sq * 0.65 + rail * 0.35);
+      }
+      shotT += 0.062;
+      shotIdx++;
+    }
+
+    // 3. Hunter Missile whooshes
+    for (const mt of [0.75, 1.15, 1.55, 1.95, 2.35, 2.75, 3.15, 3.50]) {
+      const s0 = (mt * sr) | 0;
+      const mLen = (0.18 * sr) | 0;
+      for (let k = 0; k < mLen && s0 + k < n; k++) {
+        const dt = k / sr;
+        const env = Math.sin((dt / 0.18) * Math.PI) * 0.24;
+        const whoosh = (Math.sin(k * 12.9898) * 0.5) + Math.sin(2 * Math.PI * (500 + dt * 1100) * dt) * 0.5;
+        samples[s0 + k] += env * whoosh;
+      }
+    }
+
+    // 4. Sonic Boom Impact at 3.80s
+    const imp0 = (3.80 * sr) | 0;
+    const impLen = (0.65 * sr) | 0;
+    for (let k = 0; k < impLen && imp0 + k < n; k++) {
+      const dt = k / sr;
+      const env = Math.pow(1 - dt / 0.65, 1.8) * 0.48;
+      const subF = 165 * Math.pow(35 / 165, dt / 0.65);
+      samples[imp0 + k] += env * (Math.sin(2 * Math.PI * subF * dt) * 0.7 + Math.sin(k * 78.233) * 0.3);
+    }
+
+    // 5. Phase 2: App Loading Telemetry Ticks & Rising Reactor Hum (4.15s .. 7.85s)
+    let loadT = 4.15, tickIdx = 0;
+    while (loadT < 7.85) {
+      const s0 = (loadT * sr) | 0;
+      const tLen = (0.055 * sr) | 0;
+      const prog = (loadT - 4.15) / 3.7;
+      const baseF = 440 + prog * 540 + (tickIdx % 3) * 60;
+      for (let k = 0; k < tLen && s0 + k < n; k++) {
+        const dt = k / sr;
+        const env = Math.pow(1 - dt / 0.055, 1.8) * 0.20;
+        samples[s0 + k] += env * Math.sin(2 * Math.PI * baseF * dt);
+      }
+      loadT += 0.11;
+      tickIdx++;
+    }
+
+    // 6. 100% Ready Chime Arpeggio at 7.90s .. 8.38s
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    for (let idxN = 0; idxN < notes.length; idxN++) {
+      const s0 = ((7.90 + idxN * 0.08) * sr) | 0;
+      const cLen = (0.22 * sr) | 0;
+      for (let k = 0; k < cLen && s0 + k < n; k++) {
+        const dt = k / sr;
+        const env = Math.pow(1 - dt / 0.22, 1.5) * 0.28;
+        samples[s0 + k] += env * Math.sin(2 * Math.PI * notes[idxN] * dt);
+      }
+    }
+    return encodeWavFromSamples(samples, sr);
+  }
+
+  // Build Authentic Redbound Menu Synthwave BGM Loop WAV (so Menu Games has automatic music even before a tap!)
+  function buildMenuBgmWavUri() {
+    const sr = 6000;
+    const stepSec = 0.16;
+    const steps = 32; // 5.12s seamless loop
+    const dur = steps * stepSec;
+    const n = (sr * dur) | 0;
+    const samples = new Float32Array(n);
+    const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    const bassNotes = [45, 45, 57, 45, 48, 48, 60, 48, 43, 43, 55, 43, 50, 50, 62, 50];
+    const arpNotes  = [69, 72, 76, 81, 69, 72, 76, 84, 67, 71, 74, 79, 69, 72, 76, 81];
+
+    for (let st = 0; st < steps; st++) {
+      const s0 = (st * stepSec * sr) | 0;
+      const sLen = (stepSec * sr) | 0;
+      const bFreq = midi(bassNotes[st % bassNotes.length]);
+      const aFreq = midi(arpNotes[st % arpNotes.length]);
+      const isKick = (st % 4 === 0);
+
+      for (let k = 0; k < sLen && s0 + k < n; k++) {
+        const dt = k / sr;
+        // Synth bass
+        const bEnv = Math.pow(1 - dt / stepSec, 1.4) * 0.22;
+        const bass = Math.sin(2 * Math.PI * bFreq * dt) * 0.7 + (Math.sin(2 * Math.PI * bFreq * dt) >= 0 ? 0.3 : -0.3);
+        // Pluck arpeggio
+        const aEnv = Math.pow(1 - dt / stepSec, 2.2) * 0.16;
+        const arp = Math.sin(2 * Math.PI * aFreq * dt);
+        // Subtle kick pulse on beat
+        let kick = 0;
+        if (isKick && dt < 0.09) {
+          const kFreq = 130 * Math.pow(38 / 130, dt / 0.09);
+          kick = (1 - dt / 0.09) * 0.26 * Math.sin(2 * Math.PI * kFreq * dt);
+        }
+        samples[s0 + k] += bEnv * bass + aEnv * arp + kick;
+      }
+    }
+    return encodeWavFromSamples(samples, sr);
+  }
+
+  let introWavPlaying = false;
+  let menuWavPlaying = false;
+
+  try {
+    if (introAudioEl) {
+      introAudioEl.src = buildIntroWavUri();
+      introAudioEl.volume = 0.88;
+    }
+    if (menuAudioEl) {
+      menuAudioEl.src = buildMenuBgmWavUri();
+      menuAudioEl.volume = 0.48;
+    }
+  } catch (e) {}
+
+  let localActx = null;
+  function getAudioCtx() {
+    const g = window.__neon;
+    if (g && g.audio) {
+      try {
+        g.audio.init();
+        if (g.audio.ctx && g.audio.ctx.state === "suspended") g.audio.ctx.resume().catch(() => {});
+        if (g.audio.ctx && g.audio.ctx.state === "running") return g.audio.ctx;
+      } catch (e) {}
+    }
+    if (!localActx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        try { localActx = new AC(); } catch (e) {}
+      }
+    }
+    if (localActx && localActx.state === "suspended") {
+      localActx.resume().catch(() => {});
+    }
+    return localActx;
+  }
+
+  let introStart = performance.now();
+  let finished = false;
+
+  // Aggressive Multi-Channel Auto-Play & Menu Music Bridge
+  function tryAutoStartAllAudio() {
+    const actx = getAudioCtx();
+    const g = window.__neon;
+    const webAudioRunning = Boolean(actx && actx.state === "running");
+
+    // 1. If WebAudio is running and we are past intro (or in menu), ensure native H.audio menu music is playing
+    if (g && g.audio && g.audio.ctx && g.audio.ctx.state === "running") {
+      if (finished && g.state === "menu" && g.audio.musicEnabled && !g.audio.muted) {
+        const lovl = document.getElementById("loginOvl");
+        const mode = (lovl && lovl.style.display !== "none") ? "login" : "menu";
+        if (!g.audio.musicPlaying || g.audio.musicMode !== mode) {
+          g.audio.startMusic(mode);
+        }
+        // Stop fallback HTML5 menu loop so there is no double music
+        if (menuAudioEl && !menuAudioEl.paused) {
+          try { menuAudioEl.pause(); } catch (e) {}
+        }
+      }
+    }
+
+    // 2. During Intro: ensure introAudioEl is playing automatically
+    if (!finished && introAudioEl && !introWavPlaying) {
+      try {
+        const elapsedSec = (performance.now() - introStart) / 1000;
+        if (elapsedSec < 8.0 && introAudioEl.paused) {
+          introAudioEl.currentTime = Math.max(0, Math.min(0.65, elapsedSec));
+          const p = introAudioEl.play();
+          if (p && p.then) {
+            p.then(() => {
+              introWavPlaying = true;
+              // Piggyback on active HTMLMediaElement playback to unlock WebAudio immediately!
+              getAudioCtx();
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 3. After Intro (in Menu Games): if WebAudio is still suspended by browser policy, play Menu BGM via HTML5 <audio> automatically!
+    if (finished && menuAudioEl) {
+      const gMuted = Boolean(g && g.audio && (g.audio.muted || !g.audio.musicEnabled));
+      const nativePlaying = Boolean(g && g.audio && g.audio.ctx && g.audio.ctx.state === "running" && g.audio.musicPlaying);
+      if (gMuted || nativePlaying || (g && g.state !== "menu")) {
+        if (!menuAudioEl.paused) {
+          try { menuAudioEl.pause(); } catch (e) {}
+        }
+      } else if (menuAudioEl.paused) {
+        try {
+          const p = menuAudioEl.play();
+          if (p && p.then) p.then(() => { menuWavPlaying = true; getAudioCtx(); }).catch(() => {});
+        } catch (e) {}
+      }
+    }
+  }
+
+  // Poll every 250ms and attach to all lifecycle, focus, visibility, and pointer events
+  const autoAudioInterval = setInterval(() => {
+    tryAutoStartAllAudio();
+    const g = window.__neon;
+    if (finished && g && g.audio && g.audio.ctx && g.audio.ctx.state === "running" && g.audio.musicPlaying) {
+      if (menuAudioEl && !menuAudioEl.paused) {
+        try { menuAudioEl.pause(); } catch (e) {}
+      }
+      clearInterval(autoAudioInterval);
+    }
+  }, 250);
+
+  for (const ev of ["DOMContentLoaded", "load", "pageshow", "focus", "visibilitychange", "mouseenter", "mousemove", "pointermove", "pointerdown", "touchstart", "touchend", "keydown", "click"]) {
+    window.addEventListener(ev, tryAutoStartAllAudio, { passive: true, capture: true });
+  }
+  tryAutoStartAllAudio();
+
+  function sfxShootVolley(shotCount) {
+    // If HTML5 intro WAV is already playing and WebAudio is suspended, HTML5 WAV covers the sound;
+    // if WebAudio is running and HTML5 WAV is NOT playing, synthesize live via WebAudio!
+    if (introWavPlaying && !introAudioEl.paused) return;
+    const g = window.__neon;
+    if (g && g.audio && g.audio.ctx && g.audio.ctx.state === "running" && !g.audio.muted) {
+      g.audio.shoot();
+      const fPitch = 780 + (shotCount % 5) * 65;
+      g.audio.tone(fPitch, 260, 0.085, "sawtooth", 0.055);
+      return;
+    }
+    const actx = getAudioCtx();
+    if (!actx || actx.state !== "running") return;
+    try {
+      const now = actx.currentTime;
+      const osc1 = actx.createOscillator();
+      const gain1 = actx.createGain();
+      osc1.type = "square";
+      osc1.frequency.setValueAtTime(880 + (shotCount % 4) * 45, now);
+      osc1.frequency.exponentialRampToValueAtTime(320, now + 0.085);
+      gain1.gain.setValueAtTime(0.06, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+      osc1.connect(gain1);
+      gain1.connect(actx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.09);
+    } catch (e) {}
+  }
+
+  function sfxMissileSalvo() {
+    if (introWavPlaying && !introAudioEl.paused) return;
+    const g = window.__neon;
+    if (g && g.audio && g.audio.ctx && g.audio.ctx.state === "running" && !g.audio.muted) {
+      g.audio.noise(0.14, 0.075, "highpass", 1500);
+      g.audio.tone(520, 980, 0.12, "triangle", 0.06);
+    }
+  }
+
+  function sfxSonicImpact() {
+    if (introWavPlaying && !introAudioEl.paused) return;
+    const g = window.__neon;
+    if (g && g.audio && g.audio.ctx && g.audio.ctx.state === "running" && !g.audio.muted) {
+      g.audio.explode(1.1);
+    }
+  }
+
+  function sfxLoaderTick(progressZeroToOne) {
+    if (introWavPlaying && !introAudioEl.paused) return;
+    const g = window.__neon;
+    const freq = 460 + progressZeroToOne * 540;
+    if (g && g.audio && g.audio.ctx && g.audio.ctx.state === "running" && !g.audio.muted) {
+      g.audio.tone(freq, freq * 1.18, 0.045, "sine", 0.045);
+    }
+  }
+
+  function sfxLoaderReady() {
+    if (introWavPlaying && !introAudioEl.paused) return;
+    const g = window.__neon;
+    if (g && g.audio && g.audio.ctx && g.audio.ctx.state === "running" && !g.audio.muted) {
+      g.audio.levelup();
+    }
+  }
 
   const ctx = canvas.getContext("2d");
   let W = window.innerWidth || 400;
@@ -10199,7 +10652,6 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
   window.addEventListener("resize", resize);
   resize();
 
-  // Reuse the exact 3D Beranda Starfighter & Wingman Drone images from the DOM
   const shipImg = new Image();
   const droneImg = new Image();
   function sync3dSprites() {
@@ -10223,36 +10675,39 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
   const shockwaves = [];
   const smokePuffs = [];
 
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 95; i++) {
     stars.push({
       x: Math.random() * W,
       y: Math.random() * H,
-      spd: 3.0 + Math.random() * 10.0,
+      spd: 2.5 + Math.random() * 8.5,
       sz: 0.9 + Math.random() * 2.1,
       col: Math.random() > 0.28 ? "#00f0ff" : "#f43f5e",
       alpha: 0.25 + Math.random() * 0.72
     });
   }
 
-  const INTRO_DURATION = 3150;
-  const introStart = performance.now();
   let lastShotTime = 0;
   let lastMissileTime = 0;
+  let lastTickTime = 0;
+  let shotCounter = 0;
   let impactTriggered = false;
-  let finished = false;
+  let loaderShown = false;
+  let readyChimePlayed = false;
 
   function spawnSuperDenseBarrage(sx, sy, elapsed) {
-    const count = 11; // Super-dense 11-stream plasma spread
+    shotCounter++;
+    sfxShootVolley(shotCounter);
+
+    const count = 11;
     const baseAngle = Math.PI / 2;
     const spread = 0.78;
 
-    // Twin Heavy Center Railgun Bolts
     for (const offset of [-13, 0, 13]) {
       bullets.push({
         x: sx + offset,
         y: sy + 38,
         vx: (Math.random() - 0.5) * 0.5,
-        vy: 16.5 + Math.random() * 2.8,
+        vy: 15.0 + Math.random() * 2.5,
         len: 32,
         w: 4.5,
         col: "#f43f5e",
@@ -10260,11 +10715,10 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       });
     }
 
-    // 11-Way Super-Dense Fan Spread Plasma Peluru
     for (let i = 0; i < count; i++) {
       const frac = (i / (count - 1)) - 0.5;
-      const ang = baseAngle + frac * spread + Math.sin(elapsed * 0.014) * 0.09;
-      const spd = 12.8 + Math.cos(frac * Math.PI) * 3.5;
+      const ang = baseAngle + frac * spread + Math.sin(elapsed * 0.012) * 0.09;
+      const spd = 11.8 + Math.cos(frac * Math.PI) * 3.2;
       const isOuter = Math.abs(frac) > 0.3;
       const muzzleX = sx + frac * 76;
       const muzzleY = sy + 18 + (1 - Math.abs(frac)) * 20;
@@ -10281,7 +10735,6 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       });
     }
 
-    // Wingman 3D Drone Twin Streams
     for (const side of [-1, 1]) {
       const dx = sx + side * 88;
       const dy = sy - 24;
@@ -10290,7 +10743,7 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
           x: dx + sub,
           y: dy + 20,
           vx: side * 0.75,
-          vy: 15.0,
+          vy: 14.0,
           len: 22,
           w: 3.2,
           col: "#a855f7",
@@ -10299,14 +10752,13 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       }
     }
 
-    // Muzzle flash sparks
     for (let s = 0; s < 10; s++) {
       const side = s % 2 === 0 ? -1 : 1;
       particles.push({
         x: sx + side * (14 + Math.random() * 30),
         y: sy + 28,
         vx: (Math.random() - 0.5) * 5.0,
-        vy: 5.5 + Math.random() * 6.5,
+        vy: 5.0 + Math.random() * 6.0,
         r: 2.0 + Math.random() * 2.6,
         life: 1.0,
         decay: 0.08 + Math.random() * 0.05,
@@ -10316,12 +10768,13 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
   }
 
   function spawnHunterMissiles(sx, sy) {
+    sfxMissileSalvo();
     for (const side of [-1, 1]) {
       missiles.push({
         x: sx + side * 46,
         y: sy + 8,
-        vx: side * (3.5 + Math.random() * 2.0),
-        vy: 7.0,
+        vx: side * (3.2 + Math.random() * 1.8),
+        vy: 6.4,
         targetX: W * 0.5 + (Math.random() - 0.5) * (Math.min(W, 430) * 0.68),
         trail: [],
         col: side < 0 ? "#f43f5e" : "#00f0ff"
@@ -10334,7 +10787,7 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
     ctx.translate(cx, cy);
     ctx.scale(scale, scale);
     ctx.rotate(bank * 0.18);
-    ctx.rotate(Math.PI); // Nose pointing downward as it dives top-to-bottom
+    ctx.rotate(Math.PI);
 
     const aura = ctx.createRadialGradient(0, 0, 8, 0, 0, 94);
     aura.addColorStop(0, "rgba(0, 240, 255, 0.36)");
@@ -10415,16 +10868,17 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
     if (elapsed >= INTRO_DURATION) {
       finished = true;
       overlay.classList.add("rb-intro-hide");
+      tryAutoStartAllAudio();
       setTimeout(() => {
         if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
-      }, 480);
+        tryAutoStartAllAudio();
+      }, 620);
       return;
     }
 
     ctx.clearRect(0, 0, W, H);
 
-    // 1. Warp Starfield
-    const warpMult = (elapsed > 150 && elapsed < 2450) ? 3.4 : 1.2;
+    const warpMult = (elapsed > 150 && elapsed < SHIP_PHASE_END) ? 2.8 : 1.15;
     for (const st of stars) {
       st.y -= st.spd * warpMult;
       if (st.y < -25) {
@@ -10436,69 +10890,110 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       ctx.lineWidth = st.sz;
       ctx.beginPath();
       ctx.moveTo(st.x, st.y);
-      ctx.lineTo(st.x, st.y + st.spd * warpMult * 2.5);
+      ctx.lineTo(st.x, st.y + st.spd * warpMult * 2.3);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
 
-    // 2. 3D Ship Trajectory (Top to Bottom Dive + Super-Heavy Bullet Barrage)
     const stageW = Math.min(W, 430);
     let shipY = -140;
     let shipX = W * 0.5;
     let shipScale = 1.0;
     let shipBank = 0;
-    let shipVisible = true;
+    let shipVisible = false;
 
-    if (elapsed < 480) {
-      const t = elapsed / 480;
+    if (elapsed < 750) {
+      shipVisible = true;
+      const t = elapsed / 750;
       const easeOut = 1 - Math.pow(1 - t, 3);
-      shipY = -140 + easeOut * (H * 0.24 - (-140));
-      shipScale = 0.84 + easeOut * 0.26;
-    } else if (elapsed < 2150) {
-      const t = (elapsed - 480) / 1670;
-      shipY = (H * 0.24) + t * (H * 0.34);
-      const weave = Math.sin(t * Math.PI * 3.0);
-      shipX = W * 0.5 + weave * (stageW * 0.14);
+      shipY = -140 + easeOut * (H * 0.19 - (-140));
+      shipScale = 0.84 + easeOut * 0.24;
+    } else if (elapsed < 3550) {
+      shipVisible = true;
+      const t = (elapsed - 750) / 2800;
+      shipY = (H * 0.19) + t * (H * 0.42);
+      const weave = Math.sin(t * Math.PI * 4.0);
+      shipX = W * 0.5 + weave * (stageW * 0.16);
       shipBank = weave * 0.65;
-      shipScale = 1.10 + Math.sin(t * Math.PI) * 0.10;
+      shipScale = 1.08 + Math.sin(t * Math.PI) * 0.10;
 
-      if (now - lastShotTime > 48) {
+      if (now - lastShotTime > 60) {
         spawnSuperDenseBarrage(shipX, shipY, elapsed);
         lastShotTime = now;
       }
-      if (now - lastMissileTime > 220) {
+      if (now - lastMissileTime > 340) {
         spawnHunterMissiles(shipX, shipY);
         lastMissileTime = now;
       }
-    } else if (elapsed < 2800) {
-      const t = (elapsed - 2150) / 650;
+    } else if (elapsed < SHIP_PHASE_END) {
+      shipVisible = true;
+      const t = (elapsed - 3550) / (SHIP_PHASE_END - 3550);
       const easeIn = t * t * t;
-      shipY = (H * 0.58) + easeIn * (H * 0.68);
+      shipY = (H * 0.61) + easeIn * (H * 0.65);
       shipX = W * 0.5;
-      shipScale = 1.20 + easeIn * 0.35;
+      shipScale = 1.18 + easeIn * 0.35;
 
-      if (!impactTriggered && t > 0.12) {
+      if (!impactTriggered && t > 0.15) {
         impactTriggered = true;
+        sfxSonicImpact();
         if (emblemBox) emblemBox.classList.add("rb-impact");
         shockwaves.push({
           x: W * 0.5,
-          y: H * 0.5,
+          y: H * 0.46,
           r: 20,
-          maxR: stageW * 0.75,
+          maxR: stageW * 0.78,
           alpha: 0.95,
           col: "#00f0ff"
         });
         shockwaves.push({
           x: W * 0.5,
-          y: H * 0.5,
+          y: H * 0.46,
           r: 10,
-          maxR: stageW * 0.56,
+          maxR: stageW * 0.58,
           alpha: 0.85,
           col: "#f43f5e"
         });
       }
-    } else {
-      shipVisible = false;
+    }
+
+    if (elapsed >= LOADER_START) {
+      if (!loaderShown) {
+        loaderShown = true;
+        if (loaderWrap) loaderWrap.classList.add("rb-loader-active");
+      }
+      const loadDur = INTRO_DURATION - LOADER_START - 350;
+      const rawP = Math.max(0, Math.min(1, (elapsed - LOADER_START) / loadDur));
+      const stagedP = Math.min(1, rawP + 0.04 * Math.sin(rawP * Math.PI * 4));
+      const pct = Math.round(stagedP * 100);
+      if (loaderFill) loaderFill.style.width = `${pct}%`;
+
+      if (loaderNodes && loaderNodes.length) {
+        loaderNodes.forEach((node, idx) => {
+          const threshold = ((idx + 1) / loaderNodes.length) * 95;
+          node.classList.toggle("on", pct >= threshold);
+        });
+      }
+
+      if (rawP < 0.98 && now - lastTickTime > 140) {
+        sfxLoaderTick(rawP);
+        lastTickTime = now;
+      }
+
+      if (Math.random() < 0.045) {
+        shockwaves.push({
+          x: W * 0.5,
+          y: H * 0.44,
+          r: 85,
+          maxR: 165,
+          alpha: 0.42,
+          col: Math.random() > 0.5 ? "#00f0ff" : "#f43f5e"
+        });
+      }
+
+      if (rawP >= 0.99 && !readyChimePlayed) {
+        readyChimePlayed = true;
+        sfxLoaderReady();
+      }
     }
 
     if (shipVisible && Math.random() < 0.8) {
@@ -10514,7 +11009,6 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       }
     }
 
-    // 3. Thruster Smoke Puffs
     for (let i = smokePuffs.length - 1; i >= 0; i--) {
       const sp = smokePuffs[i];
       sp.x += sp.vx;
@@ -10531,13 +11025,12 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       ctx.fill();
     }
 
-    // 4. Hunter Missiles
     for (let i = missiles.length - 1; i >= 0; i--) {
       const ms = missiles[i];
       const dx = ms.targetX - ms.x;
       ms.vx += dx * 0.0045;
       ms.vx *= 0.96;
-      ms.vy += 0.42;
+      ms.vy += 0.38;
       ms.x += ms.vx;
       ms.y += ms.vy;
       ms.trail.push({ x: ms.x, y: ms.y });
@@ -10564,7 +11057,6 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       if (ms.y > H + 40) missiles.splice(i, 1);
     }
 
-    // 5. Super-Dense Bullet Salvo
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (let i = bullets.length - 1; i >= 0; i--) {
@@ -10614,7 +11106,6 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       ctx.stroke();
     }
 
-    // 6. Particles & Shockwaves
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.x += p.vx;
@@ -10648,7 +11139,6 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
     }
     ctx.restore();
 
-    // 7. Draw 3D Starfighter
     if (shipVisible) {
       draw3dShip(shipX, shipY, shipScale, shipBank, now);
     }
