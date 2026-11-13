@@ -2673,17 +2673,20 @@ details[open] > summary .chev { transform: rotate(180deg); }
 }
 .pilot-header-hud {
   position: absolute;
-  top: 44px;
+  top: auto;
+  bottom: 44px;
   left: 0;
   right: 0;
   z-index: 16;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 5px;
+  text-align: center;
   pointer-events: none;
 }
 .pilot-title-txt {
-  font-size: clamp(23px, 6.2vw, 29px);
+  font-size: clamp(32px, 8.5vw, 40px);
   font-weight: 900;
   letter-spacing: 0.2em;
   color: #f43f5e;

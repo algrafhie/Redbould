@@ -1,9 +1,9 @@
-# Paket Deploy GitHub & Vercel — REDBOUND v2.1.6.4
+# Paket Deploy GitHub & Vercel — REDBOUND v2.1.6.8
 
 ## Daftar File yang Diupload ke Repo GitHub (`redbound.vercel.app`)
-1. `index.html` — File utama REDBOUND v2.1.6.4 (sudah diperbaiki jembatan variabel IIFE ke Supabase, sinkronisasi otomatis Koin/Trofi/Kapal/Upgrade, Papan Peringkat Global Otomatis Top 100, serta tombol Download/Instal APK di dalam menu Pengaturan Cepat `⚙️`).
-2. `sw.js` — Service Worker `v2.1.6.4` (otomatis memperbarui cache di semua perangkat dan membiarkan request API Supabase lewat langsung tanpa diganti HTML).
-3. `manifest.json` — Konfigurasi WebAPK `v2.1.6.4` dengan logo resmi REDBOUND.
+1. `index.html` — File utama REDBOUND v2.1.6.8 (sudah diperbaiki jembatan variabel IIFE ke Supabase, sinkronisasi otomatis Koin/Trofi/Kapal/Upgrade, Papan Peringkat Global Otomatis Top 100, serta tombol Download/Instal APK di dalam menu Pengaturan Cepat `⚙️`).
+2. `sw.js` — Service Worker `v2.1.6.8` (otomatis memperbarui cache di semua perangkat dan membiarkan request API Supabase lewat langsung tanpa diganti HTML).
+3. `manifest.json` — Konfigurasi WebAPK `v2.1.6.8` dengan logo resmi REDBOUND.
 4. `icon-192.png` & `icon-512.png` — Ikon resmi APK REDBOUND untuk layar utama HP.
 5. `vercel.json` & `.nojekyll` — Pengaturan header anti-cache basi untuk Vercel/GitHub.
 
