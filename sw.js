@@ -1,4 +1,4 @@
-const V = "redbound-v3-2";
+const V = "redbound-v3-3";
 const SB = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
 const PRE = ["./", "index.html", "config.js", "redbound-cloud.js", "manifest.json", "icon-192.png", "icon-512.png"];
 // File app inti: selalu utamakan versi TERBARU dari server (fallback ke cache hanya saat offline).
