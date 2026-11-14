@@ -62,9 +62,10 @@
   }
 
   /* ---------- status (internal saja, tanpa badge persisten di UI) ---------- */
-  /* User request: badge ONLINE/OFFLINE yang muncul terus di pojok bawah DIIHAPUS
-     karena mengganggu pemandangan. Sebagai gantinya, status hanya muncul sebagai
-     notifikasi toast SEMENTARA saat: (a) koneksi turun/naik, (b) sinkron gagal. */
+  /* Aturan notif (permintaan user):
+     - Saat mulai main & online: toast SEKALI "Online — Cloud aktif", lalu hilang.
+     - Saat koneksi turun: toast SEKALI "Offline — progres disimpan", lalu hilang.
+     - TIDAK ADA elemen/badge yang muncul terus-menerus di layar. */
   var lastStatus = "init";
   function statusKey() {
     if (!sb) return "no-cloud";
@@ -78,16 +79,26 @@
     if (s === lastStatus) return;
     var prev = lastStatus;
     lastStatus = s;
-    // Hanya tampilkan toast ketika TRANSISI penting (offline / sync error), bukan saat OK
-    if (s === "offline" && prev !== "init") toast("📴 Offline — progres disimpan di perangkat", "📴 Offline — progres disimpan di perangkat");
+    if (prev === "init") {
+      // Boot pertama: beri notif sekali saja kalau online (jangan saat offline — event listener offline yang urus)
+      if (s === "online" || s === "guest") toast("🌐 Online — Cloud aktif", "🌐 Online — Cloud aktif");
+      return;
+    }
+    if (s === "offline") toast("📴 Offline — progres disimpan di perangkat", "📴 Offline — progres disimpan di perangkat");
     else if (s === "sync-err") toast("⚠ Cloud sync gagal — coba lagi otomatis", "⚠ Sinkron cloud gagal — coba lagi otomatis");
-    // state "online" (sukses) TIDAK menampilkan apa-apa — sesuai permintaan user
   }
-  // Tidak ada elemen DOM persisten yang dibuat. Tidak ada DOMContentLoaded listener.
+  // Tidak ada elemen DOM persisten yang dibuat.
 
   if (sb) {
     sb.auth.getSession().then(function (r) { user = r.data && r.data.session ? r.data.session.user : null; chip(); }).catch(function () {});
-    sb.auth.onAuthStateChange(function (ev, s) { user = s && s.user ? s.user : null; chip(); });
+    sb.auth.onAuthStateChange(function (ev, s) {
+      user = s && s.user ? s.user : null;
+      chip();
+      // Login via Google OAuth (redirect balik dari Google): beri tahu UI agar masuk otomatis.
+      if (ev === "SIGNED_IN" && user && typeof window.__rbOnCloudSignedIn === "function") {
+        try { window.__rbOnCloudSignedIn(user); } catch (e) {}
+      }
+    });
   }
 
   /* ---------- akun (Supabase Auth) ---------- */
@@ -119,7 +130,7 @@
             effect: "none", partner: "", lastSupply: "" },
           progress: { ach: [], counters: { runs:0, kills:0, bestScore:0, bestKills60:0, bestBosses:0, bestLevel:0, bestPhase:0,
             chests:0, evolutions:0, winsTimed:0, winsMission:0, winsDuet:0, duetFlawless:false, bestDangerWin:0 },
-            daily: { day: new Date().toISOString().substring(0,10), goals: [], streak: 0, lastAllDone: "" }, shields: 0 },
+            daily: { day: "", goals: [], streak: 0, lastAllDone: "" }, shields: 0 },
           best: 0, danger: 0 }, false);
         } catch (e) {}
       }
@@ -179,6 +190,29 @@
       var cs = (p.data && p.data.callsign) || callsign();
       return { found: true, authError: false, data: Object.assign(v ? {} : snap(false), v || {}, { callsign: cs, email: user.email }) };
     } catch (e) { return { found: true, authError: false, data: Object.assign(snap(false), { email: user.email }) }; }
+  };
+
+  /* ---------- Login Google (OAuth asli — Account Picker HP) ---------- */
+  /* Alur yang benar (permintaan user): klik tombol Google G → PEMILIH AKUN GOOGLE
+     bawaan HP/Chrome muncul otomatis → pilih email → halaman password/verifikasi
+     milik Google → kembali ke game, langsung login. Tidak ada input email manual.
+     Syarat 1x setup: aktifkan provider Google di Supabase Dashboard
+     (panduan: supabase/GOOGLE_SETUP.txt). */
+  net.signInWithGoogle = async function () {
+    if (!sb) return { ok: false, error: "cloud" };
+    if (!online()) return { ok: false, error: "offline" };
+    try {
+      // Cek dulu: apakah provider Google sudah aktif di project Supabase?
+      var sres = await T(fetch(C.SUPABASE_URL + "/auth/v1/settings", { headers: { apikey: C.SUPABASE_ANON_KEY } }), 6000);
+      var st = await sres.json();
+      if (!st || !st.external || !st.external.google) return { ok: false, error: "google-not-enabled" };
+      // Buang sesi lokal lama supaya pemilih akun Google selalu muncul (bukan auto-login akun lama)
+      try { await sb.auth.signOut(); } catch (e) {}
+      await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e && e.message || e) };
+    }
   };
 
   /* ---------- vault (progres akun) ---------- */

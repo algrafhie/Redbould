@@ -5350,6 +5350,15 @@ function buildLoginOverlay() {
   botLink.append(toRegBtn);
 
   loginPane.append(fId, fPwd, btnEnter, btnOffline, botLink);
+
+  // Tombol Google G di halaman LOGIN juga (OAuth asli — account picker HP)
+  let loginDivider = u("l-divider");
+  loginDivider.innerHTML = `<span>${h("OR", "ATAU")}</span>`;
+  let btnGoogleLogin = L("button", "l-btn-google mono");
+  btnGoogleLogin.type = "button";
+  btnGoogleLogin.id = "googleLoginBtn";
+  btnGoogleLogin.innerHTML = `<svg class="g-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>${h("Continue with Google", "Lanjut dengan Google")}</span>`;
+  loginPane.append(loginDivider, btnGoogleLogin);
   let regPane = u();
   regPane.id = "registerPaneView";
   regPane.style.display = "none";
@@ -5417,8 +5426,8 @@ function buildLoginOverlay() {
   btnRegSubmit.id = "regSubmitBtn";
   btnRegSubmit.textContent = h("ACTIVATE PILOT LICENSE", "AKTIFKAN LISENSI PILOT");
 
-  // Tombol Google G — user request: "beri tambahan login google G. Setelah klik Google G,
-  //   beri halaman password, ini penting." Tombol ini tampil paling atas register pane.
+  // Tombol Google G di register pane — OAuth asli: klik → PEMILIH AKUN GOOGLE
+  // bawaan HP muncul → pilih email → password/verifikasi milik Google → masuk.
   let btnGoogleReg = L("button", "l-btn-google mono");
   btnGoogleReg.type = "button";
   btnGoogleReg.id = "googleRegBtn";
@@ -5447,138 +5456,36 @@ function buildLoginOverlay() {
     H?.audio?.click();
     alertBox.className = "l-alert mono";
     regPane.style.display = "none";
-    googlePane.style.display = "none";
     loginPane.style.display = "block";
   });
 
-  // === GOOGLE PASSWORD PANEL — user request: setelah klik Google G, beri halaman password ===
-  // (catatan implementasi: ini BUKAN OAuth Google asli (yang memerlukan Google Cloud project +
-  //  OAuth client + redirect URL). Sebagai gantinya, user masukkan email Google-nya + buat/masukkan
-  //  password, lalu di-daftar/login via Supabase Auth email+password. Alurnya sama persis yang
-  //  user minta: klik Google G → halaman password → masuk.)
-  let googlePane = u();
-  googlePane.id = "googlePaneView";
-  googlePane.style.display = "none";
-
-  let gHead = u("l-field");
-  let gHeadLbl = L("div", "l-label mono");
-  gHeadLbl.style.textAlign = "center";
-  gHeadLbl.style.color = "#cbd5e1";
-  gHeadLbl.innerHTML = `<div style="display:flex;justify-content:center;margin-bottom:8px">` +
-    `<svg width="34" height="34" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></div>` +
-    `<div>${h("Sign in with Google", "Masuk dengan Google")}</div>` +
-    `<div style="font-size:10px;opacity:.7;margin-top:4px;font-weight:600">${h("Enter your Google email & set an access code", "Masukkan email Google & buat kode akses")}</div>`;
-  gHead.append(gHeadLbl);
-
-  let gEmailField = u("l-field");
-  let gEmailLbl = L("label", "l-label mono");
-  gEmailLbl.setAttribute("for", "googleEmailInput");
-  gEmailLbl.textContent = h("GOOGLE EMAIL", "EMAIL GOOGLE");
-  let gEmailBox = u("l-input-wrap");
-  let gEmailInp = L("input", "mono");
-  gEmailInp.id = "googleEmailInput";
-  gEmailInp.type = "email";
-  gEmailInp.placeholder = "nama@gmail.com";
-  gEmailBox.append(gEmailInp);
-  gEmailField.append(gEmailLbl, gEmailBox);
-
-  let gCodeField = u("l-field");
-  let gCodeLbl = L("label", "l-label mono");
-  gCodeLbl.setAttribute("for", "googleCodeInput");
-  gCodeLbl.textContent = h("CREATE / ENTER ACCESS CODE", "BUAT / MASUKKAN KODE AKSES");
-  let gCodeBox = u("l-input-wrap sec");
-  let gCodeInp = L("input", "mono");
-  gCodeInp.id = "googleCodeInput";
-  gCodeInp.type = "password";
-  gCodeInp.placeholder = h("Min. 6 chars", "Min. 6 karakter");
-  let gEye = L("button", "l-eye-btn");
-  gEye.type = "button";
-  gEye.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-  gEye.addEventListener("click", () => {
-    H?.audio?.click();
-    gCodeInp.type = gCodeInp.type === "password" ? "text" : "password";
-  });
-  gCodeBox.append(gCodeInp, gEye);
-  gCodeField.append(gCodeLbl, gCodeBox);
-
-  let btnGoogleSubmit = L("button", "l-btn-google mono");
-  btnGoogleSubmit.type = "button";
-  btnGoogleSubmit.id = "googleSubmitBtn";
-  btnGoogleSubmit.innerHTML = `<svg class="g-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span>${h("Continue", "Lanjutkan")}</span>`;
-
-  let gBotLink = u("l-bottom-link");
-  let gBackBtn = L("button", "l-link-btn mono");
-  gBackBtn.type = "button";
-  gBackBtn.textContent = h("← BACK", "← KEMBALI");
-  gBotLink.append(gBackBtn);
-
-  googlePane.append(gHead, gEmailField, gCodeField, btnGoogleSubmit, gBotLink);
-
-  // Klik tombol Google G di register pane → tampilkan halaman password Google
-  btnGoogleReg.addEventListener("click", () => {
+  // === LOGIN GOOGLE — OAuth ASLI dengan Account Picker bawaan HP ===
+  // Alur yang benar (permintaan user): klik Google G → PEMILIH AKUN GOOGLE bawaan HP muncul
+  // otomatis (daftar akun Gmail yang terdaftar di HP) → pilih email → halaman
+  // password/verifikasi milik Google → kembali ke game, langsung masuk.
+  // TIDAK ADA input email manual. (Setup 1x: aktifkan provider Google di Supabase —
+  // panduan: supabase/GOOGLE_SETUP.txt)
+  function startGoogleLogin() {
     H?.audio?.click();
     alertBox.className = "l-alert mono";
-    regPane.style.display = "none";
-    googlePane.style.display = "block";
-    setTimeout(() => gEmailInp.focus(), 50);
-  });
-  // Back dari Google pane → kembali ke register pane
-  gBackBtn.addEventListener("click", () => {
-    H?.audio?.click();
-    alertBox.className = "l-alert mono";
-    googlePane.style.display = "none";
-    regPane.style.display = "block";
-  });
-
-  // Submit Google password: coba signup dulu, kalau email sudah terdaftar → fallback ke login.
-  // Callsign otomatis dari prefix email (mis. nova@gmail.com → NOVA).
-  btnGoogleSubmit.addEventListener("click", async () => {
-    let em = (gEmailInp.value || "").trim().toLowerCase();
-    let cd = (gCodeInp.value || "").trim();
-    if (!/^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(em)) {
-      H?.audio?.hurt();
-      showLoginMsg(h("⚠ Enter a valid Google email (nama@gmail.com).", "⚠ Masukkan email Google yang valid (nama@gmail.com)."), "err");
+    if (!window.RedboundNet || !window.RedboundNet.signInWithGoogle) {
+      showLoginMsg(h("⚠ Cloud module not ready — reload the page.", "⚠ Modul cloud belum siap — muat ulang halaman."), "err");
       return;
     }
-    if (cd.length < 6) {
-      H?.audio?.hurt();
-      showLoginMsg(h("⚠ Access code min. 6 chars.", "⚠ Kode akses min. 6 karakter."), "err");
-      return;
-    }
-    let cs = em.split("@")[0].toUpperCase().slice(0, 16) || "PILOT";
-    let origTxt = btnGoogleSubmit.innerHTML;
-    btnGoogleSubmit.innerHTML = `<span>${h("☁ Connecting...", "☁ Menghubungkan...")}</span>`;
-    btnGoogleSubmit.disabled = true;
-    let ok = false, cloudData = null, errMsg = "";
-    try {
-      if (window.RedboundNet && window.RedboundNet.createCloudAccount) {
-        let r = await window.RedboundNet.createCloudAccount(em, cd, cs, 9000);
-        if (r && r.ok) ok = true;
-        else if (r && r.status === 409) {
-          // email sudah terdaftar → coba login
-          let lr = await window.RedboundNet.pullCloudAccount(em, cd, 9000);
-          if (lr && lr.found && !lr.authError && lr.data) { ok = true; cloudData = lr.data; }
-          else if (lr && lr.authError) errMsg = h("Wrong access code for this Google email.", "Kode akses salah untuk email Google ini.");
-          else errMsg = h("Could not connect to Google cloud.", "Tidak bisa terhubung ke cloud Google.");
-        } else if (r && r.unreachable) errMsg = h("No internet connection.", "Tidak ada koneksi internet.");
-        else errMsg = ((r && r.error) || h("Try again.", "Coba lagi."));
-      } else errMsg = h("Cloud module not ready.", "Modul cloud belum siap.");
-    } catch (e) { errMsg = String(e && e.message || e); }
-    btnGoogleSubmit.innerHTML = origTxt;
-    btnGoogleSubmit.disabled = false;
-    if (!ok) {
-      H?.audio?.hurt();
-      showLoginMsg("⚠ " + errMsg, "err");
-      return;
-    }
-    // Simpan akun lokal + jalankan completeAuth (pakai ship default volt, tanpa bonus karena Google signup)
-    let accs = loadAccounts();
-    let rec = { callsign: cs, email: em, code: cd, ship: "volt", bonusClaimed: true, starterGiven: true, googleAuth: true, updatedAt: new Date().toISOString() };
-    accs[em] = rec;
-    accs[cs.toLowerCase()] = rec;
-    saveAccounts(accs);
-    completeAuth(cs, "volt", f.cores === 0, em, em, cd, cloudData);
-  });
+    showLoginMsg(h("☁ Opening Google account picker…", "☁ Membuka pemilih akun Google…"), "ok");
+    window.RedboundNet.signInWithGoogle().then((r) => {
+      if (r && r.ok) return; // browser di-redirect ke Google → account picker muncul
+      if (r && r.error === "google-not-enabled") {
+        showLoginMsg(h("⚠ Google login not enabled yet. Setup once: Supabase Dashboard → Authentication → Providers → Google (see supabase/GOOGLE_SETUP.txt).", "⚠ Login Google belum diaktifkan. Setup sekali: Supabase Dashboard → Authentication → Providers → Google (lihat supabase/GOOGLE_SETUP.txt)."), "err");
+      } else if (r && r.error === "offline") {
+        showLoginMsg(h("⚠ No internet connection.", "⚠ Tidak ada koneksi internet."), "err");
+      } else {
+        showLoginMsg(h("⚠ " + ((r && r.error) || "Google login failed"), "⚠ " + ((r && r.error) || "Login Google gagal")), "err");
+      }
+    }).catch(() => showLoginMsg(h("⚠ Google login failed.", "⚠ Login Google gagal."), "err"));
+  }
+  btnGoogleReg.addEventListener("click", startGoogleLogin);
+  btnGoogleLogin.addEventListener("click", startGoogleLogin);
 
   let completeAuth = (callsign, shipId, grantBonus, emailAddr="", loginId="", pwdVal="", cloudData=null) => {
     let cleanName = (callsign || "PILOT").split("@")[0].toUpperCase().slice(0, 16);
@@ -5741,13 +5648,34 @@ function buildLoginOverlay() {
     }
   });
 
-  cardInner.append(loginPane, regPane, googlePane);
+  cardInner.append(loginPane, regPane);
   cardBorder.append(cardInner);
   let loginWm = u("login-powered-wm");
   loginWm.innerHTML = '<span>powered by</span><img src="data:image/png;base64,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" alt="muzzah">';
   wrap.append(shipStage, bHead, cardBorder, loginWm);
   ovl.append(wrap);
   document.getElementById("overlay-root")?.append(ovl);
+
+  // Login via Google OAuth: setelah redirect balik dari Google, Supabase fire SIGNED_IN
+  // dan redbound-cloud.js panggil handler ini → masuk otomatis dengan data vault cloud.
+  window.__rbOnCloudSignedIn = async (u) => {
+    try {
+      if (!u || !u.email) return;
+      if (currentPilotSession && !currentPilotSession.isGuest) return; // sudah login manual — skip
+      let em = String(u.email).toLowerCase();
+      let cs = em.split("@")[0].toUpperCase().slice(0, 16) || "PILOT";
+      // Ambil & terapkan vault cloud (cores/trophies/progress milik akun Google ini)
+      try { await window.RedboundNet?.syncAllCloudNow?.(false); } catch (e) {}
+      let accs = loadAccounts();
+      let rec = accs[em] || { callsign: cs, email: em, ship: f.sel || "volt", bonusClaimed: true, starterGiven: true, googleAuth: true };
+      rec.googleAuth = true;
+      accs[em] = rec;
+      accs[cs.toLowerCase()] = rec;
+      saveAccounts(accs);
+      completeAuth(rec.callsign || cs, rec.ship || "volt", f.cores === 0, em, em, "", null);
+    } catch (e) {}
+  };
+
   setTimeout(ensureLoginMusic, 50);
 }
 
@@ -7524,6 +7452,10 @@ class RedboundNetworkManager {
           shields: Math.max(G?.shields || 0, cp.shields || 0)
         };
         SafeStorage.setItem(Js, JSON.stringify(G));
+        // FIX mission harian: pastikan SELALU ada 3 goal hari ini.
+        // Jika snapshot cloud punya daily kosong (day≠hari ini atau goals=[]), at(st())
+        // akan roll 3 mission baru. Jika cloud punya 3 goal valid hari ini → dipertahankan.
+        try { G = at(st()); SafeStorage.setItem(Js, JSON.stringify(G)); } catch (e) {}
       }
       if (typeof snap.best === "number" && snap.best > we) {
         we = snap.best;

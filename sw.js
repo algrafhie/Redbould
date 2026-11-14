@@ -1,6 +1,8 @@
-const V = "redbound-v3-1";
+const V = "redbound-v3-2";
 const SB = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
 const PRE = ["./", "index.html", "config.js", "redbound-cloud.js", "manifest.json", "icon-192.png", "icon-512.png"];
+// File app inti: selalu utamakan versi TERBARU dari server (fallback ke cache hanya saat offline).
+const NET_FIRST = /config\.js$|redbound-cloud\.js$|^\/?manifest\.json$/;
 self.addEventListener("install", (e) => {
   e.waitUntil((async () => {
     const c = await caches.open(V);
@@ -21,6 +23,12 @@ self.addEventListener("fetch", (e) => {
   if (r.mode === "navigate") {
     e.respondWith(fetch(r).then((x) => { caches.open(V).then((c) => c.put("index.html", x.clone())); return x; })
       .catch(() => caches.match("index.html")));
+    return;
+  }
+  // JS/JSON app inti (config.js, redbound-cloud.js, manifest, supabase CDN): network-first.
+  if (NET_FIRST.test(u.pathname) || u.hostname.endsWith("jsdelivr.net")) {
+    e.respondWith(fetch(r).then((x) => { if (x.ok) caches.open(V).then((c) => c.put(r, x.clone())); return x; })
+      .catch(() => caches.match(r)));
     return;
   }
   e.respondWith(caches.match(r).then((hit) => {
