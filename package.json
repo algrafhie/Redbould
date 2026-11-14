@@ -1,0 +1,22 @@
+{
+  "name": "redbound",
+  "version": "1.0.0",
+  "description": "REDBOUND - Bullet Heaven Arcade Game",
+  "private": true,
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "game",
+    "arcade",
+    "bullet-heaven",
+    "pwa"
+  ],
+  "author": "REDBOUND",
+  "license": "SEE LICENSE IN LICENSE"
+}
