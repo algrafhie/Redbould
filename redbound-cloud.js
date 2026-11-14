@@ -90,7 +90,14 @@
   // Tidak ada elemen DOM persisten yang dibuat.
 
   if (sb) {
-    sb.auth.getSession().then(function (r) { user = r.data && r.data.session ? r.data.session.user : null; chip(); }).catch(function () {});
+    sb.auth.getSession().then(function (r) {
+      user = r.data && r.data.session ? r.data.session.user : null; chip();
+      // Refresh halaman: kalau sesi Supabase masih ada tapi sesi pilot lokal hilang,
+      // langsung masuk ke menu (JANGAN tampilkan layar login/intro lagi).
+      if (user && typeof window.__rbOnCloudSignedIn === "function") {
+        try { window.__rbOnCloudSignedIn(user); } catch (e) {}
+      }
+    }).catch(function () {});
     sb.auth.onAuthStateChange(function (ev, s) {
       user = s && s.user ? s.user : null;
       chip();
