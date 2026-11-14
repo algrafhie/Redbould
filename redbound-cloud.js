@@ -61,25 +61,29 @@
       email: user ? user.email : (s.email || ""), meta: meta(), progress: progress(), best: best(), danger: danger() };
   }
 
-  /* ---------- status chip ---------- */
-  var el;
-  function chip() {
-    if (!document.body) return;
-    if (!el) {
-      el = document.createElement("div");
-      el.style.cssText = "position:fixed;left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:99999;font:10px ui-monospace,monospace;letter-spacing:.5px;padding:3px 8px;border-radius:10px;background:rgba(5,6,15,.78);pointer-events:none;border:1px solid";
-      document.body.appendChild(el);
-    }
-    var t, c;
-    if (!sb) { t = "CLOUD BELUM AKTIF"; c = "#f59e0b"; }
-    else if (!online()) { t = "OFFLINE · MAIN LOKAL"; c = "#f87171"; }
-    else if (!user) { t = "ONLINE · TAMU (BELUM LOGIN)"; c = "#9ab"; }
-    else if (syncErr) { t = "ONLINE · SYNC GAGAL"; c = "#f59e0b"; }
-    else { t = "ONLINE · CLOUD ✓"; c = "#34d399"; }
-    el.textContent = t; el.style.color = c; el.style.borderColor = c;
+  /* ---------- status (internal saja, tanpa badge persisten di UI) ---------- */
+  /* User request: badge ONLINE/OFFLINE yang muncul terus di pojok bawah DIIHAPUS
+     karena mengganggu pemandangan. Sebagai gantinya, status hanya muncul sebagai
+     notifikasi toast SEMENTARA saat: (a) koneksi turun/naik, (b) sinkron gagal. */
+  var lastStatus = "init";
+  function statusKey() {
+    if (!sb) return "no-cloud";
+    if (!online()) return "offline";
+    if (!user) return "guest";
+    if (syncErr) return "sync-err";
+    return "online";
   }
-  document.addEventListener("DOMContentLoaded", chip);
-  setTimeout(chip, 300);
+  function chip() {
+    var s = statusKey();
+    if (s === lastStatus) return;
+    var prev = lastStatus;
+    lastStatus = s;
+    // Hanya tampilkan toast ketika TRANSISI penting (offline / sync error), bukan saat OK
+    if (s === "offline" && prev !== "init") toast("📴 Offline — progres disimpan di perangkat", "📴 Offline — progres disimpan di perangkat");
+    else if (s === "sync-err") toast("⚠ Cloud sync gagal — coba lagi otomatis", "⚠ Sinkron cloud gagal — coba lagi otomatis");
+    // state "online" (sukses) TIDAK menampilkan apa-apa — sesuai permintaan user
+  }
+  // Tidak ada elemen DOM persisten yang dibuat. Tidak ada DOMContentLoaded listener.
 
   if (sb) {
     sb.auth.getSession().then(function (r) { user = r.data && r.data.session ? r.data.session.user : null; chip(); }).catch(function () {});
@@ -274,7 +278,7 @@
   net.bootCloudSync = async function () {
     try {
       if (B() && B().dedupBoards) B().dedupBoards();
-      if (!sb || !online()) { chip(); return; }
+      if (!sb || !online()) { chip(); if (!online() && sb) toast("📴 Offline — progres disimpan di perangkat", "📴 Offline — progres disimpan di perangkat"); return; }
       await sb.auth.getSession().then(function (r) { user = r.data && r.data.session ? r.data.session.user : null; }).catch(function () {});
       chip();
       var s = sess();
@@ -282,8 +286,8 @@
       if (user) await net.syncAllCloudNow(false); else net.fetchGlobalScores(true);
     } catch (e) {}
   };
-  window.addEventListener("online", function () { chip(); toast("🌐 Back online — syncing...", "🌐 Kembali online — menyinkronkan..."); net.bootCloudSync(); });
-  window.addEventListener("offline", function () { chip(); toast("📴 Offline — progress saved locally", "📴 Offline — progres disimpan di perangkat"); });
+  window.addEventListener("online", function () { toast("🌐 Back online — syncing...", "🌐 Kembali online — menyinkronkan..."); net.bootCloudSync(); });
+  window.addEventListener("offline", function () { chip(); });
 
   /* ---------- multiplayer: Supabase Realtime (ganti broker MQTT publik) ---------- */
   if (sb) {
