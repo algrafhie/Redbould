@@ -1,51 +1,30 @@
-const CACHE_NAME = 'redbound-app-v2.1.6.8';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
-];
-
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).catch(() => {}))
-  );
+const V = "redbound-v3-1";
+const SB = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
+const PRE = ["./", "index.html", "config.js", "redbound-cloud.js", "manifest.json", "icon-192.png", "icon-512.png"];
+self.addEventListener("install", (e) => {
+  e.waitUntil((async () => {
+    const c = await caches.open(V);
+    await Promise.all(PRE.map((u) => c.add(u).catch(() => {})));
+    await c.add(new Request(SB, { mode: "cors" })).catch(() => {});
+    self.skipWaiting();
+  })());
 });
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+self.addEventListener("activate", (e) => {
+  e.waitUntil((async () => {
+    for (const k of await caches.keys()) if (k !== V) await caches.delete(k);
+    await self.clients.claim();
+  })());
 });
-
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-
-  // Permintaan lintas origin (server cloud / broker) TIDAK disentuh service worker:
-  // gagal jaringan harus sampai ke game apa adanya, bukan diganti file HTML
-  // (fallback HTML ke respons API dulu bisa membuat sesi/progress gagal dibaca).
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-        }
-        return response;
-      })
-      .catch(() => {
-        // Fallback ke shell HANYA untuk navigasi halaman (bukan untuk data/API).
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-        return caches.match(event.request);
-      })
-  );
+self.addEventListener("fetch", (e) => {
+  const r = e.request, u = new URL(r.url);
+  if (r.method !== "GET" || u.hostname.endsWith("supabase.co")) return; // API & realtime: jangan di-cache
+  if (r.mode === "navigate") {
+    e.respondWith(fetch(r).then((x) => { caches.open(V).then((c) => c.put("index.html", x.clone())); return x; })
+      .catch(() => caches.match("index.html")));
+    return;
+  }
+  e.respondWith(caches.match(r).then((hit) => {
+    const net = fetch(r).then((x) => { if (x.ok) caches.open(V).then((c) => c.put(r, x.clone())); return x; }).catch(() => hit);
+    return hit || net;
+  }));
 });
