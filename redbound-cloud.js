@@ -196,19 +196,22 @@
   /* Alur yang benar (permintaan user): klik tombol Google G → PEMILIH AKUN GOOGLE
      bawaan HP/Chrome muncul otomatis → pilih email → halaman password/verifikasi
      milik Google → kembali ke game, langsung login. Tidak ada input email manual.
-     Syarat 1x setup: aktifkan provider Google di Supabase Dashboard
-     (panduan: supabase/GOOGLE_SETUP.txt). */
+     Google provider SUDAH AKTIF di Supabase (Client ID terpasang via Management API). */
   net.signInWithGoogle = async function () {
     if (!sb) return { ok: false, error: "cloud" };
     if (!online()) return { ok: false, error: "offline" };
     try {
-      // Cek dulu: apakah provider Google sudah aktif di project Supabase?
-      var sres = await T(fetch(C.SUPABASE_URL + "/auth/v1/settings", { headers: { apikey: C.SUPABASE_ANON_KEY } }), 6000);
-      var st = await sres.json();
-      if (!st || !st.external || !st.external.google) return { ok: false, error: "google-not-enabled" };
       // Buang sesi lokal lama supaya pemilih akun Google selalu muncul (bukan auto-login akun lama)
       try { await sb.auth.signOut(); } catch (e) {}
-      await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+      var r = null;
+      try { r = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } }); }
+      catch (e) { return { ok: false, error: String(e && e.message || e) }; }
+      if (r && r.error) {
+        var m = String(r.error.message || r.error);
+        if (/provider|unsupported|not enabled/i.test(m)) return { ok: false, error: "google-not-enabled" };
+        return { ok: false, error: m };
+      }
+      // Berhasil → browser segera di-redirect ke accounts.google.com (pemilih akun HP)
       return { ok: true };
     } catch (e) {
       return { ok: false, error: String(e && e.message || e) };

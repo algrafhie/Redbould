@@ -1,7 +1,9 @@
-// Anon key aman dipublikasikan (dilindungi RLS). JANGAN pernah memakai service_role key di sini.
+// Publishable key aman dipublikasikan (dilindungi RLS). JANGAN pernah memakai secret key di sini.
+// Catatan: kunci JWT lama (eyJ...) sudah DITOLAK endpoint Auth Supabase — semua
+// login email/Google gagal "Invalid API key" kalau masih pakai kunci lama.
 window.REDBOUND_CONFIG = {
   SUPABASE_URL: "https://rpkispipazjiunjylaxu.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwa2lzcGlwYXpqaXVuanlsYXh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ0Mjk4NDgsImV4cCI6MjExMDAwNTg0OH0.DfoWL71ljZCAxlA69Q8BD4se8zrmK-Vsq9nQGMsEPno"
+  SUPABASE_ANON_KEY: "sb_publishable_K6IrLeztZ1IFpWtv2OGP5Q_xn7dt3hT"
 };
-// LOGIN GOOGLE (Account Picker HP): aktifkan sekali lewat Supabase Dashboard.
-// Panduan super singkat ada di file supabase/GOOGLE_SETUP.txt
+// LOGIN GOOGLE: sudah AKTIF di Supabase (Client ID terpasang lewat API).
+// Panduan lengkap tetap ada di file supabase/GOOGLE_SETUP.txt
