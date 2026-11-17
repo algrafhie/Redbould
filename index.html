@@ -7186,6 +7186,85 @@ function calcRunTrophies(run){
   return Math.max(4, Math.min(38, Math.round(base * dMul)));
 }
 
+// ===== RB PILOT BOARD FILL — daftar pilot pseudo (7 tier, geser harian deterministik) =====
+// Papan peringkat selalu terisi untuk SEMUA tier (CADET s/d APEX). Pilot nyata selalu
+// di atas pilot pseudo di sekitarnya; posisi pseudo-pilot bergeser kecil tiap hari.
+var RB_BOARD_BOTS=(function(){
+  var TMIN=[0,200,500,1000,2000,4000,7000];
+  var JIT=[35,45,55,70,80,90,110];
+  var ROSTERS=[
+    [["FajarBocilXD",9],["AnandaGaming",16],["RendyHPKadut",24],["Sinta_Bae",33],["JokoDwi_11",41],["NaylaCantikID",50],["BagasTuyul",58],["DimasPenakut",67],["RizkyGacor",75],["Aulia_XD",84],["BayuLaper",92],["CahyaNomorph",101],["IntanSpark",110],["Gilagila_777",118],["WahyuModeOn",127],["EchaAjaDulu",139]],
+    [["BangZul_21",205],["PutriNeon22",222],["IqbalPukul",240],["DewaKembang",257],["Farel_Tzy",274],["MbakYuni_87",291],["SultanBlitar",308],["Adinda_rj",325],["YogaSantai",342],["RafiBoyo",359],["KakaBulukumba",376],["Vina_Aurora",393],["TonoSule",410],["HarbatauNvm",427],["ReyMbtTeam",444],["DindaMelati",470]],
+    [["AganSejati",505],["CakIm_45",530],["RaniButters",556],["OjanGaming_",582],["BondowosoX",608],["BpkTukangMode",634],["SekarArum",660],["JogjaCity_7",686],["LaodeBjg",712],["BungaRindang",738],["FaturBlitar",764],["AmelZff",790],["Rizaldy_kr",816],["IfanSultan",842],["CimusHore",868],["BagusMuliono",905]],
+    [["NovaReaper",1008],["GhostByte",1050],["Kx_Shadow",1095],["MikaRin_",1140],["ZeroPulse",1185],["Sora_exe",1230],["VectorNine",1275],["ArkLight_ID",1320],["BlitzHaze",1365],["OnyxDrift",1410],["CyberRonin",1455],["EchoVane",1500],["RizqyPhantom",1560],["PaleRiderX",1650],["NightSketch",1780],["QuartzFox",1925]],
+    [["GarudaEcho",2015],["AldoSakti",2090],["SultanMedan",2170],["RivenTide",2255],["KaizoDrift",2340],["Rehan_Clm",2425],["TristanVoid",2510],["Overclock_Id",2595],["Maharani_Q",2680],["BlitzFreya",2765],["VortexMain",2850],["KanataRv",2960],["SniperAlfa",3100],["HaidarStorm",3280],["NetherJet",3520],["OracleWing",3870]],
+    [["LegendBali",4020],["SenaKazuma",4140],["PutraSulsel",4270],["Fenrir_JKT",4400],["NebulaIdn",4530],["ArkaNova",4660],["Zeph_Grn",4790],["MakassarRiot",4920],["LunerionX",5050],["ChandraGntg",5190],["AuroraBlade",5340],["KairosVn",5520],["SigitWibu",5740],["SelowPace",6010],["TempestBoy",6380],["RizomaKr",6790]],
+    [["KingBaharin",7015],["AlfaTunggal",7090],["YamatoHx",7170],["GalangPratama",7255],["SulttnRv",7340],["VynzAether",7425],["BocilPetir",7510],["Excaliburr",7595],["NandaErnst",7680],["FarelGbk",7720],["KaedeMiyu",7755],["ZeynArkan",7785],["ReinHard_ID",7810],["SultanLevio",7835],["AnzhelaVn",7858],["ImmortqlJoe",7878]]
+  ];
+  function rbDay(){var d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();}
+  function rnd(tag){return ((Fn(tag+"#"+rbDay())>>>0)%10000)/10000;}
+  function qual(nb){return 0.905+((Fn(nb)>>>3)%90)/1000;}
+  function buildAll(){
+    var day=rbDay(),rows=[];
+    for(var t=0;t<ROSTERS.length;t++){
+      var list=ROSTERS[t];
+      for(var b=0;b<list.length;b++){
+        var nb=list[b][0],base=list[b][1];
+        var r1=rnd(nb+"1"),r2=rnd(nb+"2"),r3=rnd(nb+"3"),r4=rnd(nb+"4");
+        var trp=base+Math.round((r1*2-1)*JIT[t]);
+        if(trp<TMIN[t])trp=TMIN[t]+Math.floor(r2*15);
+        var score=Math.max(60,Math.round(trp*47*qual(nb)*(1+(r2*2-1)*0.012)));
+        rows.push({name:nb,tierMin:TMIN[t],score:score,trophies:trp,
+          kills:Math.max(3,Math.round(score/128+r3*40)),
+          survived:Math.max(60,Math.round(Math.min(600,240+score/450)+(r4*2-1)*30)),
+          level:Math.max(1,Math.min(67,6+Math.floor(trp/135)+Math.floor(r4*3))),
+          bosses:t>=2?1+(Fn(nb+"b"+day)%3):0,
+          danger:t>=4?(1+(r2<0.5?1:0)+(r3<0.2?1:0)):(t>=2?(r4<0.4?1:0):0)});
+      }
+    }
+    return rows;
+  }
+  function merge(real,meName,meTrp,meScore,meMeta){
+    real=Array.isArray(real)?real.filter(r=>r&&typeof r==="object"):[];
+    var meKey=String(meName||"").trim().toUpperCase();
+    var realNames={};
+    for(var i=0;i<real.length;i++){var nm=String(real[i].name||real[i].callsign||"").trim().toUpperCase();if(nm)realNames[nm]=1;}
+    var capTrp=meTrp>0?meTrp-100:0;
+    var bots=buildAll();
+    var out=[];
+    for(var b=0;b<bots.length;b++){
+      var o=bots[b];
+      if(realNames[o.name.toUpperCase()])continue;
+      if(capTrp>0&&o.trophies>capTrp){
+        o.trophies=Math.max(o.tierMin,capTrp-Math.floor(rnd(o.name+"c")*90));
+        o.score=Math.max(60,Math.round(o.trophies*47*qual(o.name)));
+        o.level=Math.max(1,Math.min(67,6+Math.floor(o.trophies/135)));
+      }
+      out.push(o);
+    }
+    if(meKey&&meScore>0){
+      var meRow={name:String(meName).trim(),score:Math.round(meScore),
+        trophies:meTrp>0?Math.round(meTrp):getRowTrophies({score:meScore},0),
+        kills:Math.round(Number(meMeta&&meMeta.kills)||meScore/128),
+        survived:Math.round(Number(meMeta&&meMeta.survived)||600),
+        level:Math.max(1,Math.round(Number(meMeta&&meMeta.level)||6+Math.floor((meTrp||0)/135))),
+        bosses:Math.round(Number(meMeta&&meMeta.bosses)||0),
+        danger:Math.round(Number(meMeta&&meMeta.danger)||0)};
+      var rep=false;
+      for(var i2=0;i2<real.length;i2++){
+        if(String(real[i2].name||real[i2].callsign||"").trim().toUpperCase()===meKey){
+          if((Number(real[i2].score)||0)<meRow.score)real[i2]=meRow;
+          rep=true;break;
+        }
+      }
+      if(!rep)real.push(meRow);
+    }
+    out=real.concat(out);
+    out.sort((a,b)=>(b.score||0)-(a.score||0));
+    return out.slice(0,220);
+  }
+  return {merge:merge,buildAll:buildAll};
+})();
 
 var _generatedRoomCode = "RB-" + Math.floor(1000 + Math.random() * 9000);
 
@@ -9705,6 +9784,11 @@ function mn(n,e,t,i){
     a=dt(e==="squad"?$t:ht);
   }
   if(!Array.isArray(a))a=[];
+  if(e==="global"&&typeof RB_BOARD_BOTS<"u"){
+    let soloMine=myName?(dt(ht)||[]).find(r=>String(r.name||r.callsign||"").toUpperCase()===myName):null;
+    let meMeta=soloMine?{kills:soloMine.kills,survived:soloMine.survived,level:Math.max(Number(soloMine.level)||0,Number(G?.counters?.bestLevel)||0),bosses:soloMine.bosses,danger:soloMine.danger}:{level:Number(G?.counters?.bestLevel)||0,bosses:Number(G?.counters?.bestBosses)||0};
+    a=RB_BOARD_BOTS.merge(a,myDisplayCall,myTrp,Math.max(Number(we)||0,Number(G?.counters?.bestScore)||0),meMeta);
+  }
 
   let enriched=a.map((o,idx)=>{
     let rowName=String(o.name||o.callsign||"PILOT").trim();
