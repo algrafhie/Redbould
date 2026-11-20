@@ -208,6 +208,8 @@
     if (!sb) return { ok: false, error: "cloud" };
     if (!online()) return { ok: false, error: "offline" };
     try {
+      // Tandai sedang proses OAuth Google agar redirect balik tidak memicu popup EXIT
+      try { sessionStorage.setItem("rb_oauth_pending", String(Date.now())); } catch (e) {}
       // Buang sesi lokal lama supaya pemilih akun Google selalu muncul (bukan auto-login akun lama)
       try { await sb.auth.signOut(); } catch (e) {}
       var r = null;
@@ -380,6 +382,21 @@
       // FIX: clear local session + progress setelah signOut, supaya UI kembali ke TAMU
       // dan progress akun lama tidak bocor ke akun baru yang login berikutnya
       try {
+        var keepLang = null;
+        try { keepLang = localStorage.getItem("neon-survivor:lang-v3"); } catch (e) {}
+        try {
+          var keysToRemove = [];
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (!k || k === "neon-survivor:lang-v3") continue;
+            if (k.indexOf("neon-survivor:") === 0 || k.indexOf("redbound") === 0 || k.indexOf("sb-") === 0 || k.indexOf("supabase") === 0) {
+              keysToRemove.push(k);
+            }
+          }
+          keysToRemove.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+          if (keepLang !== null) { try { localStorage.setItem("neon-survivor:lang-v3", keepLang); } catch (e) {} }
+        } catch (e) {}
+        try { sessionStorage.clear(); } catch (e) {}
         sSet("neon-survivor:session", null);
         sSet("neon-survivor:progress", null);
         sSet("neon-survivor:meta", null);

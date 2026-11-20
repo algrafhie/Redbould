@@ -9774,6 +9774,7 @@ function hn(){
   k.title=h("Click to view Pilot Trophy Rank & Gate Milestones","Klik untuk melihat Pangkat Trophy & Syarat Gembok");
   k.addEventListener("click",()=>{
     H?.audio?.click();
+    activeBoardTierFilter=getPilotRankInfo(f.trophies||0).tierKey;
     je("career");
     window.__rbOpenProfileSubTab?.("rank");
     let rInfo=getPilotRankInfo(f.trophies||0);
@@ -11741,6 +11742,10 @@ for(let evName of["pointerdown","pointermove","touchstart","touchmove","keydown"
   getDanger:()=>It,
   getCallsign:()=>String(currentPilotSession?.callsign||Dt||SafeStorage.getItem(_e)||"PILOT").trim(),
   setCallsign:c=>{Dt=String(c||"").trim();try{SafeStorage.setItem(_e,Dt)}catch{}},
+  clearLocalIdentity:()=>{
+    [LOGIN_SESSION_KEY,LOGIN_ACCOUNTS_KEY,_e,_s,Js,Lt,cn,ht,$t,"redbound-auth","neon-survivor:cloudRev","neon-survivor:cloudTs","redbound:cloudDirty","neon-survivor:cloudSyncPayload","neon-survivor:global:board"].forEach(k=>{try{SafeStorage.removeItem(k)}catch{}});
+    currentPilotSession=null;Dt="";we=0;It=0;f=ci();G=at(st());kt(G);
+  },
   getSoloBoard:()=>dt(ht),
   getSquadBoard:()=>dt($t),
   dedupBoards:()=>{try{dt(ht);dt($t)}catch{}},
@@ -11759,7 +11764,7 @@ setTimeout(()=>{
 },350);
 try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("room")){let lv=document.getElementById("loginOvl");if(lv)lv.style.display="none";setTimeout(()=>openOnlineLobbyModal(),350)}}catch(e){}}ga();})();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
+<script src="supabase.js"></script>
 <script>(function(){["config.js","redbound-cloud.js"].forEach(function(u){try{var s=document.createElement("script");s.src=u;s.async=false;s.onerror=function(){};document.head.appendChild(s);}catch(e){}});})();</script>
 <script>
 /* REDBOUND UX PATCH v3 — pemulihan arena & tombol kembali (DOM-only) */
@@ -11851,19 +11856,45 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
     if(dlgOpen()){confirmExit();return "handled";}
     showDlg();return "handled";
   };
-  // Trap history utk browser: back pertama -> dialog, back kedua -> keluar
+  // Trap history hanya di browser. Android menangani tombol kembali secara native;
+  // jangan anggap redirect/kembali dari OAuth Google sebagai perintah keluar.
+  var pageBootTs=Date.now();
+  var isOAuthReturn=false;
   try{
-    history.replaceState({rbTrap:1},"");
-    history.pushState({rbTrap:2},"");
-    window.addEventListener("popstate",function(){
-      if(exiting)return;
-      if(dlgOpen()){confirmExit();}
-      else{
-        showDlg();
-        setTimeout(function(){try{history.pushState({rbTrap:2},"")}catch(e){}},0);
-      }
-    });
+    if(/[#?&](access_token|refresh_token|code|id_token|provider_token|error_description)=/i.test(location.href)){
+      isOAuthReturn=true;
+    }
+    var oauthTs=Number(sessionStorage.getItem("rb_oauth_pending")||0);
+    if(oauthTs&&(Date.now()-oauthTs)<120000){
+      isOAuthReturn=true;
+      sessionStorage.removeItem("rb_oauth_pending");
+    }
   }catch(e){}
+  if(!window.RedboundApp){
+    try{
+      var initTrap=function(){
+        try{
+          history.replaceState({rbTrap:1},"");
+          history.pushState({rbTrap:2},"");
+        }catch(e){}
+      };
+      if(isOAuthReturn){
+        setTimeout(initTrap,2500);
+      }else{
+        initTrap();
+      }
+      window.addEventListener("popstate",function(ev){
+        if(exiting)return;
+        if((Date.now()-pageBootTs)<3500)return;
+        if(ev&&ev.state&&ev.state.rbTrap!==1)return;
+        if(dlgOpen()){confirmExit();}
+        else{
+          showDlg();
+          setTimeout(function(){try{history.pushState({rbTrap:2},"")}catch(e){}},0);
+        }
+      });
+    }catch(e){}
+  }
 })();
 </script>
 <script>
@@ -12054,21 +12085,65 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
 
     var accBox = document.querySelector(".settings-acc-box");
     if (accBox) {
+      // 1) Tombol DOWNLOAD / INSTALL APK (hanya tampil di browser non-standalone)
       var sBtn = document.getElementById("rbInstallApkSettingsBtn");
-      if (!sBtn) {
-        sBtn = document.createElement("button");
-        sBtn.type = "button";
-        sBtn.id = "rbInstallApkSettingsBtn";
-        sBtn.className = "rb-apk-btn-settings mono";
-        sBtn.addEventListener("click", function(ev){
-          if (pop) pop.classList.remove("open");
-          handleApkClick(ev);
-        });
-        accBox.appendChild(sBtn);
+      if (!installed) {
+        if (!sBtn) {
+          sBtn = document.createElement("button");
+          sBtn.type = "button";
+          sBtn.id = "rbInstallApkSettingsBtn";
+          sBtn.className = "rb-apk-btn-settings mono";
+          sBtn.addEventListener("click", function(ev){
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (pop) pop.classList.remove("open");
+            handleApkClick(ev);
+          });
+          accBox.appendChild(sBtn);
+        }
+        sBtn.style.display = "flex";
+        sBtn.innerHTML = '<img src="' + logo + '" alt="" class="rb-apk-ic"><span>' + tr("📲 DOWNLOAD / INSTALL APK (" + ver + ")", "📲 DOWNLOAD / INSTAL APK (" + ver + ")") + '</span>';
+      } else if (sBtn) {
+        sBtn.style.display = "none";
       }
-      sBtn.innerHTML = installed
-        ? '<span>✓ ' + tr("APP INSTALLED (" + ver + ")", "APLIKASI TERINSTAL (" + ver + ")") + '</span>'
-        : '<img src="' + logo + '" alt="" class="rb-apk-ic"><span>' + tr("📲 DOWNLOAD / INSTALL APK (" + ver + ")", "📲 DOWNLOAD / INSTAL APK (" + ver + ")") + '</span>';
+
+      // 2) Tombol LOG OUT permanen — SELALU tampil baik login Google/Email maupun Tamu
+      var loBtn = document.getElementById("rbLogoutSettingsBtn");
+      if (!loBtn) {
+        loBtn = document.createElement("button");
+        loBtn.type = "button";
+        loBtn.id = "rbLogoutSettingsBtn";
+        loBtn.className = "rb-apk-btn-settings mono";
+        loBtn.style.cssText = "border-color:rgba(244,63,94,.65);background:linear-gradient(90deg,rgba(244,63,94,.22),rgba(127,29,29,.35));color:#fecdd3;";
+        loBtn.addEventListener("click", function(ev){
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (pop) pop.classList.remove("open");
+          if (!window.confirm(tr("Log out and clear saved accounts, names, local progress and leaderboard history from this device? Cloud accounts and cloud saves will not be deleted.", "Logout dan hapus akun tersimpan, nama, progres lokal, serta riwayat papan peringkat dari perangkat ini? Akun dan save cloud tidak akan dihapus."))) return;
+          (async function(){
+            try { await window.REDBOUND_CLOUD?.signOut?.(); } catch(e) {}
+            try { window.__rbBridge?.clearLocalIdentity?.(); } catch(e) {}
+            try {
+              var keepLang = localStorage.getItem("neon-survivor:lang-v3");
+              var toDel = [];
+              for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (!k || k === "neon-survivor:lang-v3") continue;
+                if (k.indexOf("neon-survivor:") === 0 || k.indexOf("redbound") === 0 || k.indexOf("sb-") === 0 || k.indexOf("supabase") === 0) {
+                  toDel.push(k);
+                }
+              }
+              toDel.forEach(function(k){ try { localStorage.removeItem(k); } catch(e) {} });
+              if (keepLang !== null) localStorage.setItem("neon-survivor:lang-v3", keepLang);
+            } catch(e) {}
+            try { sessionStorage.clear(); } catch(e) {}
+            try { window.location.replace(location.origin + location.pathname); } catch(e) { window.location.reload(); }
+          })();
+        });
+        accBox.appendChild(loBtn);
+      }
+      loBtn.style.display = "flex";
+      loBtn.innerHTML = '<span>↪ ' + tr("LOG OUT", "KELUAR AKUN") + '</span>';
     }
   }
 
@@ -12082,7 +12157,7 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
 
   try {
     var obs = new MutationObserver(function(){
-      if (!document.getElementById("rbInstallApkSettingsBtn")) {
+      if (!document.getElementById("rbLogoutSettingsBtn")) {
         syncSettingsApkButton();
       }
     });
