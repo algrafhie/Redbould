@@ -12074,8 +12074,6 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
       if (el) el.remove();
     }
 
-    var installed = isStandaloneApp();
-    var logo = getLogoHref();
     var ver = getAppVersion();
 
     var pop = document.getElementById("topSettingsPop");
@@ -12085,66 +12083,93 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
 
     var accBox = document.querySelector(".settings-acc-box");
     if (accBox) {
-      // 1) Tombol DOWNLOAD / INSTALL APK (hanya tampil di browser non-standalone)
-      var sBtn = document.getElementById("rbInstallApkSettingsBtn");
-      if (!installed) {
-        if (!sBtn) {
-          sBtn = document.createElement("button");
-          sBtn.type = "button";
-          sBtn.id = "rbInstallApkSettingsBtn";
-          sBtn.className = "rb-apk-btn-settings mono";
-          sBtn.addEventListener("click", function(ev){
+      // 1) TOMBOL INSTAL APK DIHAPUS TOTAL — tidak boleh muncul di mode apa pun
+      //    (APK terpasang maupun dibuka lewat browser). Tidak ada tombol
+      //    "DOWNLOAD / INSTALL APK" maupun "APP INSTALLED".
+      var apkBtnIds = ["rbInstallApkSettingsBtn", "rbInstallApkTopBtn", "rbInstallApkLaunchBtn", "rbInstallApkLoginBtn"];
+      for (var ai = 0; ai < apkBtnIds.length; ai++) {
+        var ab = document.getElementById(apkBtnIds[ai]);
+        if (ab) ab.remove();
+      }
+      try {
+        var staleBtns = accBox.querySelectorAll("button");
+        for (var si = 0; si < staleBtns.length; si++) {
+          var sb = staleBtns[si];
+          if (!sb || sb.id === "rbLogoutSettingsBtn") continue;
+          var stxt = (sb.textContent || "").toUpperCase();
+          if (stxt.indexOf("APP INSTALLED") >= 0 || stxt.indexOf("APP TERPASANG") >= 0 ||
+              stxt.indexOf("SUDAH TERINSTAL") >= 0 || stxt.indexOf("INSTALL APK") >= 0 ||
+              stxt.indexOf("INSTAL APK") >= 0 || stxt.indexOf("DOWNLOAD / INSTAL") >= 0 ||
+              stxt.indexOf("DOWNLOAD / INSTALL") >= 0) {
+            sb.remove();
+          }
+        }
+      } catch(e) {}
+
+      // 2) Tombol LOG OUT — HANYA muncul jika user BENAR-BENAR punya akun terdaftar (punya email).
+      //    Akun tamu / belum daftar TIDAK boleh melihat tombol logout.
+      var loBtn = document.getElementById("rbLogoutSettingsBtn");
+      var loggedIn = isRegisteredAccount();
+
+      if (!loggedIn) {
+        if (loBtn) loBtn.remove();
+      } else {
+        if (!loBtn) {
+          loBtn = document.createElement("button");
+          loBtn.type = "button";
+          loBtn.id = "rbLogoutSettingsBtn";
+          loBtn.className = "rb-apk-btn-settings mono";
+          loBtn.style.cssText = "border-color:rgba(244,63,94,.65);background:linear-gradient(90deg,rgba(244,63,94,.22),rgba(127,29,29,.35));color:#fecdd3;";
+          loBtn.addEventListener("click", function(ev){
             ev.preventDefault();
             ev.stopPropagation();
             if (pop) pop.classList.remove("open");
-            handleApkClick(ev);
+            if (!isRegisteredAccount()) { syncSettingsApkButton(); return; }
+            if (!window.confirm(tr("Log out and clear saved accounts, names, local progress and leaderboard history from this device? Cloud accounts and cloud saves will not be deleted.", "Logout dan hapus akun tersimpan, nama, progres lokal, serta riwayat papan peringkat dari perangkat ini? Akun dan save cloud tidak akan dihapus."))) return;
+            (async function(){
+              try { await window.REDBOUND_CLOUD?.signOut?.(); } catch(e) {}
+              try { window.__rbBridge?.clearLocalIdentity?.(); } catch(e) {}
+              try {
+                var keepLang = localStorage.getItem("neon-survivor:lang-v3");
+                var toDel = [];
+                for (var i = 0; i < localStorage.length; i++) {
+                  var k = localStorage.key(i);
+                  if (!k || k === "neon-survivor:lang-v3") continue;
+                  if (k.indexOf("neon-survivor:") === 0 || k.indexOf("redbound") === 0 || k.indexOf("sb-") === 0 || k.indexOf("supabase") === 0) {
+                    toDel.push(k);
+                  }
+                }
+                toDel.forEach(function(k){ try { localStorage.removeItem(k); } catch(e) {} });
+                if (keepLang !== null) localStorage.setItem("neon-survivor:lang-v3", keepLang);
+              } catch(e) {}
+              try { sessionStorage.clear(); } catch(e) {}
+              try { window.location.replace(location.origin + location.pathname); } catch(e) { window.location.reload(); }
+            })();
           });
-          accBox.appendChild(sBtn);
+          accBox.appendChild(loBtn);
         }
-        sBtn.style.display = "flex";
-        sBtn.innerHTML = '<img src="' + logo + '" alt="" class="rb-apk-ic"><span>' + tr("📲 DOWNLOAD / INSTALL APK (" + ver + ")", "📲 DOWNLOAD / INSTAL APK (" + ver + ")") + '</span>';
-      } else if (sBtn) {
-        sBtn.style.display = "none";
+        loBtn.style.display = "flex";
+        loBtn.innerHTML = '<span>↪ ' + tr("LOG OUT", "KELUAR AKUN") + '</span>';
       }
 
-      // 2) Tombol LOG OUT permanen — SELALU tampil baik login Google/Email maupun Tamu
-      var loBtn = document.getElementById("rbLogoutSettingsBtn");
-      if (!loBtn) {
-        loBtn = document.createElement("button");
-        loBtn.type = "button";
-        loBtn.id = "rbLogoutSettingsBtn";
-        loBtn.className = "rb-apk-btn-settings mono";
-        loBtn.style.cssText = "border-color:rgba(244,63,94,.65);background:linear-gradient(90deg,rgba(244,63,94,.22),rgba(127,29,29,.35));color:#fecdd3;";
-        loBtn.addEventListener("click", function(ev){
-          ev.preventDefault();
-          ev.stopPropagation();
-          if (pop) pop.classList.remove("open");
-          if (!window.confirm(tr("Log out and clear saved accounts, names, local progress and leaderboard history from this device? Cloud accounts and cloud saves will not be deleted.", "Logout dan hapus akun tersimpan, nama, progres lokal, serta riwayat papan peringkat dari perangkat ini? Akun dan save cloud tidak akan dihapus."))) return;
-          (async function(){
-            try { await window.REDBOUND_CLOUD?.signOut?.(); } catch(e) {}
-            try { window.__rbBridge?.clearLocalIdentity?.(); } catch(e) {}
-            try {
-              var keepLang = localStorage.getItem("neon-survivor:lang-v3");
-              var toDel = [];
-              for (var i = 0; i < localStorage.length; i++) {
-                var k = localStorage.key(i);
-                if (!k || k === "neon-survivor:lang-v3") continue;
-                if (k.indexOf("neon-survivor:") === 0 || k.indexOf("redbound") === 0 || k.indexOf("sb-") === 0 || k.indexOf("supabase") === 0) {
-                  toDel.push(k);
-                }
-              }
-              toDel.forEach(function(k){ try { localStorage.removeItem(k); } catch(e) {} });
-              if (keepLang !== null) localStorage.setItem("neon-survivor:lang-v3", keepLang);
-            } catch(e) {}
-            try { sessionStorage.clear(); } catch(e) {}
-            try { window.location.replace(location.origin + location.pathname); } catch(e) { window.location.reload(); }
-          })();
-        });
-        accBox.appendChild(loBtn);
-      }
-      loBtn.style.display = "flex";
-      loBtn.innerHTML = '<span>↪ ' + tr("LOG OUT", "KELUAR AKUN") + '</span>';
+      // Rapikan urutan: logout selalu di paling bawah panel
+      var loNow = document.getElementById("rbLogoutSettingsBtn");
+      if (loNow && loNow.parentNode === accBox) accBox.appendChild(loNow);
     }
+  }
+
+  function getSessionSafe(){
+    try {
+      var s = (window.__rbBridge && window.__rbBridge.getSession) ? window.__rbBridge.getSession() : null;
+      if (s) return s;
+    } catch(e) {}
+    try { return JSON.parse(localStorage.getItem("neon-survivor:session") || "null"); } catch(e) { return null; }
+  }
+
+  function isRegisteredAccount(){
+    var s = getSessionSafe();
+    var em = s && s.email ? String(s.email).trim() : "";
+    return em.indexOf("@") > 0;
   }
 
   if (document.readyState === "loading") {
@@ -12154,19 +12179,41 @@ try{if(typeof location!=="undefined"&&new URLSearchParams(location.search).get("
   }
   setTimeout(syncSettingsApkButton, 150);
   setTimeout(syncSettingsApkButton, 600);
+  setTimeout(syncSettingsApkButton, 1200);
 
+  // Pantau perubahan status akun (login/logout/switch email) & saat panel dibuka
+  function scheduleSync(delay){
+    clearTimeout(window.__rbSyncSettingsT);
+    window.__rbSyncSettingsT = setTimeout(syncSettingsApkButton, delay || 120);
+  }
   try {
     var obs = new MutationObserver(function(){
-      if (!document.getElementById("rbLogoutSettingsBtn")) {
-        syncSettingsApkButton();
-      }
+      var panel = document.getElementById("topSettingsPop");
+      var shouldShow = isRegisteredAccount();
+      var exists = !!document.getElementById("rbLogoutSettingsBtn");
+      // Hanya kerja saat panel terbuka atau status tombol tidak sesuai
+      if ((panel && panel.classList.contains("open")) || shouldShow !== exists) scheduleSync(150);
     });
     obs.observe(document.body, { childList: true, subtree: true });
+    var popObs = document.getElementById("topSettingsPop");
+    if (popObs) {
+      new MutationObserver(function(){
+        if (popObs.classList.contains("open")) scheduleSync(30);
+      }).observe(popObs, { attributes: true, attributeFilter: ["class"] });
+    }
+    var accObs = document.getElementById("settingsAccStatus");
+    if (accObs) {
+      new MutationObserver(function(){ scheduleSync(80); })
+        .observe(accObs, { childList: true, characterData: true, subtree: true });
+    }
   } catch(e){}
 
   document.addEventListener("click", function(ev){
     var t = ev.target;
     if (t && (t.id === "langBtn" || (t.closest && t.closest("#langBtn")))) {
+      setTimeout(syncSettingsApkButton, 60);
+    }
+    if (t && (t.closest && t.closest(".top-gear-btn"))) {
       setTimeout(syncSettingsApkButton, 60);
     }
   }, true);

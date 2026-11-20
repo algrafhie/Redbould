@@ -1,0 +1,47 @@
+REDBOUND — PAKET LENGKAP v1.2 (paling baru)
+==========================================
+
+Isi folder ini:
+
+1. REDBOUND.apk
+   Satu-satunya APK. Versi 1.2 (versionCode 3), Android 6.0+.
+   Sudah dipatch:
+   - Tombol "DOWNLOAD / INSTALL APK" DIHAPUS TOTAL (tidak muncul di APK
+     maupun saat dibuka lewat browser).
+   - Tombol "APP INSTALLED" dihapus total.
+   - Tombol "LOG OUT / KELUAR AKUN" hanya muncul untuk akun terdaftar
+     (punya email). Tamu tidak melihat tombol logout.
+
+2. HTML/
+   Versi web/HTML yang SUDAH SAMA PERSIS dengan isi APK.
+   File: index.html, config.js, redbound-cloud.js, supabase.js
+   Cara pakai: buka HTML/index.html lewat browser (Chrome/Opera).
+   Catatan: fitur cloud/Supabase paling stabil lewat APK; saat dibuka
+   sebagai file lokal, sebagian fitur online bisa dibatasi browser.
+
+3. REDBOUND-Android/
+   Source code Android lengkap (siap dibuka di Android Studio).
+   Keystore ada di: REDBOUND-Android/redbound-release.jks
+   Alias: redbound | Store/Key password: redbound2024
+
+4. SHA256.txt
+   Checksum APK & index.html untuk memastikan file tidak rusak.
+
+CARA INSTALL APK:
+1. Ekstrak ZIP ini, lalu buka REDBOUND.apk (jangan buka ZIP-nya langsung).
+2. Izinkan "Install unknown apps" untuk File Manager/Chrome jika diminta.
+3. Jika Play Protect muncul: More details -> Install anyway.
+4. Jika update dari versi lama gagal ("App not installed"), uninstall
+   REDBOUND lama dulu lalu pasang APK ini.
+
+SPESIFIKASI:
+- Package : com.redbound.game
+- Version : 1.2 (versionCode 3)
+- minSdk  : 23 (Android 6.0) | targetSdk 35 (Android 15)
+- Izin    : INTERNET
+- Tanda tangan: v1 + v2 (keystore sama seperti versi sebelumnya)
+
+BUILD ULANG (opsional):
+  cd REDBOUND-Android
+  gradle assembleRelease
+  (butuh JDK 17 + Android SDK Platform 35 + Build Tools 35)

@@ -7,7 +7,21 @@ android {
         applicationId 'com.redbound.game'
         minSdk 23
         targetSdk 35
-        versionCode 1
-        versionName '1.0'
+        versionCode 3
+        versionName '1.2'
+    }
+    signingConfigs {
+        release {
+            storeFile file('../redbound-release.jks')
+            storePassword 'redbound2024'
+            keyAlias 'redbound'
+            keyPassword 'redbound2024'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
     }
 }
